@@ -1,7 +1,9 @@
-import { generateSecretKey, getPublicKey, finalizeEvent, nip19 } from 'nostr-tools';
+import * as nostr from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils';
 
-// Use your specified relays from bchnostr
+// Use the correct exported functions
+const { generateSecretKey, getPublicKey, finalizeEvent, nip19 } = nostr;
+
 export const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -24,10 +26,16 @@ export const generateNewKey = () => {
 
 export const loginWithPrivateKey = (privateKey) => {
   try {
-    const sk = hexToBytes(privateKey);
+    let sk;
+    if (privateKey.startsWith('nsec')) {
+      const decoded = nip19.decode(privateKey);
+      sk = decoded.data;
+    } else {
+      sk = hexToBytes(privateKey);
+    }
     const pk = getPublicKey(sk);
     return {
-      privateKey: privateKey,
+      privateKey: bytesToHex(sk),
       publicKey: pk,
       npub: nip19.npubEncode(pk)
     };
@@ -39,7 +47,6 @@ export const loginWithPrivateKey = (privateKey) => {
 
 export const hexToBytes = (hex) => {
   if (!hex) return null;
-  // Remove nsec prefix if present
   if (hex.startsWith('nsec')) {
     const decoded = nip19.decode(hex);
     return decoded.data;
