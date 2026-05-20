@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Zap } from 'lucide-react';
 import { relayManager } from '../utils/relay';
 import { DEFAULT_RELAYS } from '../utils/nostr';
 
@@ -47,13 +46,13 @@ function StatusBar() {
       >
         {isConnected ? (
           <>
-            <Wifi size={12} className={getQualityColor()} />
+            <span className={getQualityColor()}>📶</span>
             <span className="text-[#71767B]">{status.connected}/{status.total}</span>
-            <Zap size={10} className="text-yellow-500" />
+            <span className="text-yellow-500">⚡</span>
           </>
         ) : (
           <>
-            <WifiOff size={12} className="text-[#F4212E]" />
+            <span className="text-[#F4212E]">📡</span>
             <span className="text-[#F4212E]">Offline</span>
           </>
         )}

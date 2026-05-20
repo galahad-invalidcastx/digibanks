@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Upload, Camera, Link2, AtSign, User, Info, Globe, Zap } from 'lucide-react';
+import React, { useState, useRef } from 'react';
 import { finalizeEvent } from 'nostr-tools';
 import { hexToBytes, DEFAULT_RELAYS } from '../utils/nostr';
 import { relayManager } from '../utils/relay';
@@ -31,13 +30,11 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
   const handleImageUpload = (file, type) => {
     if (!file) return;
     
-    // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('Image must be less than 5MB');
       return;
     }
     
-    // Check file type
     if (!file.type.startsWith('image/')) {
       setError('Please upload an image file');
       return;
@@ -64,7 +61,6 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
     setSuccess('');
 
     try {
-      // Create profile event
       const profileEvent = {
         kind: 0,
         created_at: Math.floor(Date.now() / 1000),
@@ -84,7 +80,6 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
       const privateKeyBytes = hexToBytes(user.privateKey);
       const signedEvent = finalizeEvent(profileEvent, privateKeyBytes);
       
-      // Publish to relays
       const successCount = await relayManager.publishEvent(signedEvent, DEFAULT_RELAYS);
       
       if (successCount > 0) {
@@ -110,15 +105,15 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
       <div className="flex justify-between items-center p-4 border-b border-[#2F3336]">
         <button 
           onClick={onClose}
-          className="p-2 active:bg-white/10 rounded-full transition"
+          className="p-2 active:bg-white/10 rounded-full transition text-xl"
         >
-          <X size={24} />
+          ✕
         </button>
         <h2 className="text-xl font-bold">Edit profile</h2>
         <button 
           onClick={handleSubmit}
           disabled={loading}
-          className="bg-[#1D9BF0] disabled:opacity-50 px-4 py-2 rounded-full font-semibold text-sm active:scale-95 transition"
+          className="bg-[#00BA7C] disabled:opacity-50 px-4 py-2 rounded-full font-semibold text-sm active:scale-95 transition"
         >
           {loading ? 'Saving...' : 'Save'}
         </button>
@@ -127,7 +122,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
       {/* Form Content */}
       <div className="flex-1 overflow-y-auto">
         {/* Cover Photo */}
-        <div className="relative h-48 bg-gradient-to-r from-[#1D9BF0] to-[#00BA7C]">
+        <div className="relative h-48 bg-gradient-to-r from-[#00BA7C] to-[#1D9BF0]">
           {previewBanner && (
             <img 
               src={previewBanner} 
@@ -137,9 +132,9 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
           )}
           <button
             onClick={() => bannerInputRef.current?.click()}
-            className="absolute bottom-4 right-4 bg-black/60 backdrop-blur p-2 rounded-full active:scale-95 transition"
+            className="absolute bottom-4 right-4 bg-black/60 backdrop-blur p-2 rounded-full active:scale-95 transition text-xl"
           >
-            <Camera size={20} />
+            📷
           </button>
           <input
             ref={bannerInputRef}
@@ -153,7 +148,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
         {/* Avatar */}
         <div className="px-4">
           <div className="relative -mt-12 mb-4">
-            <div className="w-24 h-24 rounded-full border-4 border-black overflow-hidden bg-gradient-to-br from-[#1D9BF0] to-[#00BA7C]">
+            <div className="w-24 h-24 rounded-full border-4 border-black overflow-hidden bg-gradient-to-br from-[#00BA7C] to-[#1D9BF0]">
               {previewPicture ? (
                 <img 
                   src={previewPicture} 
@@ -168,9 +163,9 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
             </div>
             <button
               onClick={() => pictureInputRef.current?.click()}
-              className="absolute bottom-0 right-0 bg-[#1D9BF0] p-2 rounded-full active:scale-95 transition"
+              className="absolute bottom-0 right-0 bg-[#00BA7C] p-2 rounded-full active:scale-95 transition text-sm"
             >
-              <Camera size={16} />
+              📷
             </button>
             <input
               ref={pictureInputRef}
@@ -187,7 +182,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
           {/* Display Name */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <User size={14} className="inline mr-1" />
+              <span className="inline mr-1">👤</span>
               Display name
             </label>
             <input
@@ -195,7 +190,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
               value={formData.display_name}
               onChange={(e) => handleChange('display_name', e.target.value)}
               placeholder="Your display name"
-              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#1D9BF0] focus:outline-none transition"
+              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#00BA7C] focus:outline-none transition"
               maxLength="50"
             />
           </div>
@@ -203,7 +198,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
           {/* Name/Username */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <AtSign size={14} className="inline mr-1" />
+              <span className="inline mr-1">@</span>
               Name / Username
             </label>
             <input
@@ -211,7 +206,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="Your name"
-              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#1D9BF0] focus:outline-none transition"
+              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#00BA7C] focus:outline-none transition"
               maxLength="50"
             />
           </div>
@@ -219,7 +214,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
           {/* Bio */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <Info size={14} className="inline mr-1" />
+              <span className="inline mr-1">ℹ️</span>
               Bio
             </label>
             <textarea
@@ -227,7 +222,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
               onChange={(e) => handleChange('about', e.target.value)}
               placeholder="Tell us about yourself"
               rows="4"
-              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#1D9BF0] focus:outline-none transition resize-none"
+              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#00BA7C] focus:outline-none transition resize-none"
               maxLength="160"
             />
             <div className="text-right text-xs text-[#71767B] mt-1">
@@ -238,7 +233,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
           {/* NIP-05 */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <Link2 size={14} className="inline mr-1" />
+              <span className="inline mr-1">🔗</span>
               NIP-05 Identifier
             </label>
             <input
@@ -246,7 +241,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
               value={formData.nip05}
               onChange={(e) => handleChange('nip05', e.target.value)}
               placeholder="user@example.com"
-              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#1D9BF0] focus:outline-none transition"
+              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#00BA7C] focus:outline-none transition"
             />
             <p className="text-xs text-[#71767B] mt-1">
               Get verified by setting up a nostr.json file on your domain
@@ -256,7 +251,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
           {/* Website */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <Globe size={14} className="inline mr-1" />
+              <span className="inline mr-1">🌐</span>
               Website
             </label>
             <input
@@ -264,14 +259,14 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
               value={formData.website}
               onChange={(e) => handleChange('website', e.target.value)}
               placeholder="https://your-website.com"
-              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#1D9BF0] focus:outline-none transition"
+              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#00BA7C] focus:outline-none transition"
             />
           </div>
 
           {/* Lightning Address */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <Zap size={14} className="inline mr-1" />
+              <span className="inline mr-1">⚡</span>
               Lightning Address (BCH)
             </label>
             <input
@@ -279,7 +274,7 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
               value={formData.lud16}
               onChange={(e) => handleChange('lud16', e.target.value)}
               placeholder="you@getalby.com"
-              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#1D9BF0] focus:outline-none transition"
+              className="w-full bg-[#2F3336] rounded-lg p-3 text-white placeholder-[#71767B] focus:border-[#00BA7C] focus:outline-none transition"
             />
             <p className="text-xs text-[#71767B] mt-1">
               Receive Bitcoin Cash tips with your Lightning address

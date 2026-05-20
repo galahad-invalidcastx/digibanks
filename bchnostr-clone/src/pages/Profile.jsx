@@ -4,7 +4,6 @@ import ProfileEditor from '../components/ProfileEditor';
 import { relayManager } from '../utils/relay';
 import { DEFAULT_RELAYS, shortenKey } from '../utils/nostr';
 import { fetchProfile } from '../utils/profile';
-import { CheckCircle, Calendar, Link2, Edit3, Camera } from 'lucide-react';
 
 function Profile({ user, onNavigate }) {
   const [activeTab, setActiveTab] = useState('posts');
@@ -18,11 +17,9 @@ function Profile({ user, onNavigate }) {
   const loadProfileAndPosts = async () => {
     setLoading(true);
     
-    // Load profile for the current user
     const profileData = await fetchProfile(user.publicKey);
     setProfile(profileData);
     
-    // Load user's posts
     const filter = {
       kinds: [1],
       authors: [user.publicKey],
@@ -69,7 +66,7 @@ function Profile({ user, onNavigate }) {
   return (
     <>
       <div>
-        {/* Cover Photo with Edit Button */}
+        {/* Cover Photo */}
         <div className="relative">
           {profile?.banner ? (
             <img 
@@ -88,12 +85,12 @@ function Profile({ user, onNavigate }) {
             onClick={() => setShowEditor(true)}
             className="absolute top-4 right-4 bg-black/60 backdrop-blur px-3 py-1.5 rounded-full text-sm flex items-center gap-1 active:scale-95 transition"
           >
-            <Edit3 size={14} />
+            <span>✏️</span>
             Edit cover
           </button>
         </div>
         
-        {/* Avatar with Edit Button */}
+        {/* Avatar */}
         <div className="px-4">
           <div className="relative -mt-16 mb-4">
             {profile?.picture ? (
@@ -115,7 +112,7 @@ function Profile({ user, onNavigate }) {
               onClick={() => setShowEditor(true)}
               className="absolute bottom-2 right-2 bg-black border border-[#2F3336] p-2 rounded-full active:scale-95 transition"
             >
-              <Camera size={16} />
+              <span>📷</span>
             </button>
           </div>
 
@@ -125,7 +122,7 @@ function Profile({ user, onNavigate }) {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl font-bold">{displayName}</h1>
-                  {isVerified && <CheckCircle size={20} className="text-[#00BA7C]" />}
+                  {isVerified && <span className="text-[#00BA7C] text-lg">✓</span>}
                 </div>
                 <p className="text-[#71767B]">@{shortenKey(user.publicKey)}</p>
               </div>
@@ -133,7 +130,7 @@ function Profile({ user, onNavigate }) {
                 onClick={() => setShowEditor(true)}
                 className="btn-outline flex items-center gap-2 text-sm"
               >
-                <Edit3 size={16} />
+                <span>✏️</span>
                 Edit profile
               </button>
             </div>
@@ -145,12 +142,12 @@ function Profile({ user, onNavigate }) {
             <div className="flex flex-wrap gap-4 mt-2 text-[#71767B] text-sm">
               {profile?.website && (
                 <a href={profile.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
-                  <Link2 size={14} />
+                  <span>🔗</span>
                   {profile.website.replace('https://', '').replace('http://', '')}
                 </a>
               )}
               <div className="flex items-center gap-1">
-                <Calendar size={14} />
+                <span>📅</span>
                 Joined {joinedDate}
               </div>
             </div>

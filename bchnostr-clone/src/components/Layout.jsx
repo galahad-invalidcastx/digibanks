@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Home, Compass, Bell, Mail, Bookmark, User, Plus, LogOut } from 'lucide-react';
 import StatusBar from './StatusBar';
 import { fetchProfile } from '../utils/profile';
 import { shortenKey } from '../utils/nostr';
@@ -44,12 +43,12 @@ function Layout({ children, user, onLogout, currentPage, onNavigate }) {
   }, [lastScrollY]);
 
   const navItems = [
-    { id: 'home', label: 'Home', icon: Home, activeIcon: Home },
-    { id: 'explore', label: 'Explore', icon: Compass, activeIcon: Compass },
-    { id: 'notifications', label: 'Notifications', icon: Bell, activeIcon: Bell },
-    { id: 'messages', label: 'Messages', icon: Mail, activeIcon: Mail },
-    { id: 'bookmarks', label: 'Bookmarks', icon: Bookmark, activeIcon: Bookmark },
-    { id: 'profile', label: 'Profile', icon: User, activeIcon: User },
+    { id: 'home', label: 'Home', icon: '🏠' },
+    { id: 'explore', label: 'Explore', icon: '🔍' },
+    { id: 'notifications', label: 'Notifications', icon: '🔔' },
+    { id: 'messages', label: 'Messages', icon: '💬' },
+    { id: 'bookmarks', label: 'Bookmarks', icon: '📌' },
+    { id: 'profile', label: 'Profile', icon: '👤' },
   ];
 
   const handlePost = async () => {
@@ -67,7 +66,6 @@ function Layout({ children, user, onLogout, currentPage, onNavigate }) {
     setShowMobileMenu(false);
   };
 
-  // Get display name from profile
   const getDisplayName = () => {
     if (userProfile?.display_name) return userProfile.display_name;
     if (userProfile?.name) return userProfile.name;
@@ -79,14 +77,14 @@ function Layout({ children, user, onLogout, currentPage, onNavigate }) {
 
   return (
     <div className="min-h-screen-dynamic bg-black pb-[70px] lg:pb-0">
-      {/* Mobile Header with Leaf Branding */}
+      {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-black/95 backdrop-blur-md border-b border-[#2F3336] z-50 safe-top">
         <div className="flex items-center justify-between px-4 py-2">
           <button 
             onClick={() => setShowMobileMenu(true)}
-            className="p-2 -ml-2 active:bg-white/10 rounded-full transition"
+            className="p-2 -ml-2 active:bg-white/10 rounded-full transition text-xl"
           >
-            <Menu size={22} />
+            ☰
           </button>
           
           <div className="flex flex-col items-center">
@@ -101,14 +99,14 @@ function Layout({ children, user, onLogout, currentPage, onNavigate }) {
           
           <button 
             onClick={() => setShowCompose(true)}
-            className="p-2 -mr-2 active:bg-white/10 rounded-full transition"
+            className="p-2 -mr-2 active:bg-white/10 rounded-full transition text-[#00BA7C] text-xl"
           >
-            <Plus size={22} className="text-[#00BA7C]" />
+            ✨
           </button>
         </div>
       </div>
 
-      {/* Desktop Header with Leaf Branding */}
+      {/* Desktop Header */}
       <div className="hidden lg:block fixed top-0 left-0 right-0 bg-black/95 backdrop-blur-md border-b border-[#2F3336] z-50">
         <div className="max-w-[1400px] mx-auto px-4 py-2">
           <div className="flex justify-between items-center">
@@ -137,14 +135,14 @@ function Layout({ children, user, onLogout, currentPage, onNavigate }) {
               </div>
               <button 
                 onClick={() => setShowMobileMenu(false)}
-                className="p-2 active:bg-white/10 rounded-full"
+                className="p-2 active:bg-white/10 rounded-full text-xl"
               >
-                <X size={24} />
+                ✕
               </button>
             </div>
             
             <div className="p-4">
-              {/* User Info - Now shows display name */}
+              {/* User Info */}
               <button 
                 onClick={handleViewProfile}
                 className="w-full flex items-center gap-3 mb-8 p-3 bg-white/5 rounded-2xl active:bg-white/10 transition"
@@ -154,10 +152,6 @@ function Layout({ children, user, onLogout, currentPage, onNavigate }) {
                     src={profilePicture} 
                     alt={displayName}
                     className="w-12 h-12 rounded-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.parentElement.innerHTML = `<div class="w-12 h-12 bg-gradient-to-br from-[#00BA7C] to-[#1D9BF0] rounded-full flex items-center justify-center text-xl font-bold">${avatarInitial}</div>`;
-                    }}
                   />
                 ) : (
                   <div className="w-12 h-12 bg-gradient-to-br from-[#00BA7C] to-[#1D9BF0] rounded-full flex items-center justify-center text-xl font-bold">
@@ -179,11 +173,11 @@ function Layout({ children, user, onLogout, currentPage, onNavigate }) {
                       onNavigate(item.id);
                       setShowMobileMenu(false);
                     }}
-                    className={`w-full flex items-center gap-4 p-3 rounded-xl active:bg-white/10 transition ${
+                    className={`w-full flex items-center gap-4 p-3 rounded-xl active:bg-white/10 transition text-left ${
                       currentPage === item.id ? 'bg-white/5 text-[#00BA7C]' : 'text-white'
                     }`}
                   >
-                    <item.icon size={24} />
+                    <span className="text-2xl">{item.icon}</span>
                     <span className="font-medium">{item.label}</span>
                   </button>
                 ))}
@@ -194,7 +188,7 @@ function Layout({ children, user, onLogout, currentPage, onNavigate }) {
                 onClick={onLogout}
                 className="w-full flex items-center gap-4 p-3 rounded-xl active:bg-white/10 text-red-500 mt-8"
               >
-                <LogOut size={24} />
+                <span className="text-2xl">🚪</span>
                 <span className="font-medium">Logout</span>
               </button>
             </div>
@@ -215,17 +209,16 @@ function Layout({ children, user, onLogout, currentPage, onNavigate }) {
       }`}>
         <div className="flex justify-around py-2">
           {navItems.map(item => {
-            const Icon = item.icon;
             const isActive = currentPage === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
-                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-full active:scale-95 transition ${
+                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-full active:scale-95 transition text-2xl ${
                   isActive ? 'text-[#00BA7C]' : 'text-[#71767B]'
                 }`}
               >
-                <Icon size={22} />
+                <span>{item.icon}</span>
                 <span className="text-xs">{item.label}</span>
               </button>
             );
@@ -239,7 +232,7 @@ function Layout({ children, user, onLogout, currentPage, onNavigate }) {
           <div className="flex justify-between items-center p-4 border-b border-[#2F3336]">
             <button 
               onClick={() => setShowCompose(false)}
-              className="p-2 active:bg-white/10 rounded-full"
+              className="p-2 active:bg-white/10 rounded-full text-xl"
             >
               ✕
             </button>

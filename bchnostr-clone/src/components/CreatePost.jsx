@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { finalizeEvent } from 'nostr-tools';
 import { hexToBytes, DEFAULT_RELAYS } from '../utils/nostr';
 import { relayManager } from '../utils/relay';
-import { Image, Smile, Send } from 'lucide-react';
 
 function CreatePost({ user, onPostCreated }) {
   const [content, setContent] = useState('');
@@ -42,7 +41,7 @@ function CreatePost({ user, onPostCreated }) {
     }
   };
 
-  const commonEmojis = ['😀', '😂', '🤣', '😊', '😍', '🤔', '🚀', '💎', '🪙', '⚡', '❤️', '🔥'];
+  const commonEmojis = ['😀', '😂', '🤣', '😊', '😍', '🤔', '🚀', '💎', '🪙', '⚡', '❤️', '🔥', '🍃', '🌿'];
 
   return (
     <div className="border-b border-[#2F3336] p-4">
@@ -50,7 +49,7 @@ function CreatePost({ user, onPostCreated }) {
         <div className="flex gap-3">
           {/* Avatar */}
           <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#1D9BF0] to-[#00BA7C] rounded-full flex items-center justify-center text-sm font-bold">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#00BA7C] to-[#1D9BF0] rounded-full flex items-center justify-center text-sm font-bold">
               {user.npub?.[6]?.toUpperCase() || 'U'}
             </div>
           </div>
@@ -80,23 +79,23 @@ function CreatePost({ user, onPostCreated }) {
               <div className="flex gap-1 relative">
                 <button 
                   type="button" 
-                  className="p-2 rounded-full active:bg-[#1D9BF0]/10 text-[#1D9BF0] transition touch-manipulation"
+                  className="p-2 rounded-full active:bg-[#00BA7C]/10 text-[#00BA7C] transition text-xl"
                 >
-                  <Image size={20} />
+                  📷
                 </button>
                 
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-2 rounded-full active:bg-[#1D9BF0]/10 text-[#1D9BF0] transition touch-manipulation"
+                    className="p-2 rounded-full active:bg-[#00BA7C]/10 text-[#00BA7C] transition text-xl"
                   >
-                    <Smile size={20} />
+                    😊
                   </button>
                   
                   {showEmojiPicker && (
                     <div className="absolute bottom-full left-0 mb-2 bg-black border border-[#2F3336] rounded-xl p-2 z-50">
-                      <div className="grid grid-cols-6 gap-1">
+                      <div className="grid grid-cols-7 gap-1">
                         {commonEmojis.map(emoji => (
                           <button
                             key={emoji}
@@ -119,12 +118,12 @@ function CreatePost({ user, onPostCreated }) {
               <button
                 type="submit"
                 disabled={!content.trim() || isPosting || content.length > 280}
-                className="bg-[#1D9BF0] disabled:opacity-50 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1 active:scale-95 transition"
+                className="bg-[#00BA7C] disabled:opacity-50 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1 active:scale-95 transition"
               >
                 {isPosting ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white"></div>
                 ) : (
-                  <Send size={16} />
+                  <span>✨</span>
                 )}
                 <span>{isPosting ? '' : 'Post'}</span>
               </button>
