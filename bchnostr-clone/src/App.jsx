@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
-import Feed from './components/Feed';
 import Layout from './components/Layout';
+// Remove ConnectionStatus import
+import Feed from './pages/Feed';
+import Explore from './pages/Explore';
+import Notifications from './pages/Notifications';
+import Messages from './pages/Messages';
+import Bookmarks from './pages/Bookmarks';
+import Profile from './pages/Profile';
+import ThreadView from './pages/ThreadView';
 import { relayManager } from './utils/relay';
 
 function App() {
   const [user, setUser] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [currentPage, setCurrentPage] = useState('home');
+  const [selectedPost, setSelectedPost] = useState(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('nostr_user');
@@ -18,43 +26,62 @@ function App() {
   }, []);
 
   const connectToRelays = async () => {
-    const connected = await relayManager.connectToRelays();
-    setIsConnected(connected);
-    
-    if (!connected) {
-      console.warn('Failed to connect to some relays');
-    }
+    const count = await relayManager.connectToRelays();
+    console.log(`Connected to ${count} relays`);
   };
 
-  const handleLogin = (userData) => {
+  const handleLogin = async (userData) => {
     setUser(userData);
     localStorage.setItem('nostr_user', JSON.stringify(userData));
-    connectToRelays();
+    await connectToRelays();
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('nostr_user');
     relayManager.disconnect();
-    setIsConnected(false);
+    setCurrentPage('home');
+  };
+
+  const navigateTo = (page, post = null) => {
+    setCurrentPage(page);
+    if (post) setSelectedPost(post);
+    window.scrollTo(0, 0);
   };
 
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
 
+  const renderPage = () => {
+    switch(currentPage) {
+      case 'home':
+        return <Feed user={user} onNavigate={navigateTo} />;
+      case 'explore':
+        return <Explore user={user} onNavigate={navigateTo} />;
+      case 'notifications':
+        return <Notifications user={user} onNavigate={navigateTo} />;
+      case 'messages':
+        return <Messages user={user} onNavigate={navigateTo} />;
+      case 'bookmarks':
+        return <Bookmarks user={user} onNavigate={navigateTo} />;
+      case 'profile':
+        return <Profile user={user} onNavigate={navigateTo} />;
+      case 'thread':
+        return <ThreadView post={selectedPost} user={user} onNavigate={navigateTo} />;
+      default:
+        return <Feed user={user} onNavigate={navigateTo} />;
+    }
+  };
+
   return (
-    <Layout user={user} onLogout={handleLogout}>
-      <Feed user={user} />
-      
-      {/* Connection status indicator */}
-      <div className="fixed bottom-4 right-4 z-50">
-        <div className={`px-3 py-1 rounded-full text-xs font-mono ${
-          isConnected ? 'bg-x-green/20 text-x-green' : 'bg-x-red/20 text-x-red'
-        }`}>
-          {isConnected ? '● Connected' : '○ Disconnected'}
-        </div>
-      </div>
+    <Layout 
+      user={user} 
+      onLogout={handleLogout} 
+      currentPage={currentPage}
+      onNavigate={navigateTo}
+    >
+      {renderPage()}
     </Layout>
   );
 }

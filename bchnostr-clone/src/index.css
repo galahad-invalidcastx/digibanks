@@ -4,18 +4,24 @@
 
 @layer base {
   * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
   }
-
+  
   body {
     @apply bg-black text-white font-sans antialiased;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Custom scrollbar - X.com style */
+  button, 
+  [role="button"],
+  a {
+    @apply touch-manipulation;
+  }
+
   ::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
+    height: 4px;
   }
 
   ::-webkit-scrollbar-track {
@@ -23,36 +29,85 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-x-gray rounded-full;
+    @apply bg-[#2F3336] rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-x-light-gray;
+    @apply bg-[#00BA7C];
+  }
+
+  input, 
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 }
 
 @layer components {
-  /* Button styles */
   .btn-primary {
-    @apply bg-x-blue hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full transition-all duration-200 disabled:opacity-50;
+    @apply bg-[#00BA7C] hover:bg-[#00a06a] text-white font-bold py-2 px-4 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
-
+  
   .btn-outline {
-    @apply border border-x-gray hover:bg-white/10 text-white font-bold py-2 px-4 rounded-full transition-all duration-200;
+    @apply border border-[#2F3336] hover:bg-white/10 text-white font-bold py-2 px-4 rounded-full transition-all duration-200;
   }
-
-  /* Card styles */
+  
   .post-card {
-    @apply border-b border-x-gray hover:bg-white/[0.03] transition-colors duration-200;
+    @apply border-b border-[#2F3336] transition-colors duration-200;
+  }
+  
+  .touch-manipulation {
+    touch-action: manipulation;
   }
 
-  /* Sidebar link */
-  .sidebar-link {
-    @apply flex items-center gap-4 text-xl hover:bg-white/10 rounded-full py-3 px-4 transition-all duration-200 w-fit;
+  .leaf-gradient {
+    @apply bg-gradient-to-r from-[#00BA7C] to-[#1D9BF0];
   }
 
-  /* Input styles */
-  .input-primary {
-    @apply bg-black border border-x-gray rounded-full px-4 py-2 text-white focus:border-x-blue focus:outline-none transition-all;
+  .leaf-text {
+    @apply text-[#00BA7C];
+  }
+
+  .leaf-border {
+    @apply border-[#00BA7C];
+  }
+
+  .leaf-bg {
+    @apply bg-[#00BA7C];
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
   }
 }

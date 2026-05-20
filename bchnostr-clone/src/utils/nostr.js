@@ -1,15 +1,17 @@
 import { generateSecretKey, getPublicKey, finalizeEvent, nip19 } from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils';
 
-// Default relays - you can add more
+// Use your specified relays from bchnostr
 export const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
-  'wss://relay.nostr.band',
   'wss://nos.lol',
-  'wss://relay.primal.net'
+  'wss://relay.primal.net',
+  'wss://relay.nostr.band',
+  'wss://purplepag.es',
+  'wss://relay.snort.social',
+  'wss://nostr.wine'
 ];
 
-// Key Management
 export const generateNewKey = () => {
   const sk = generateSecretKey();
   const pk = getPublicKey(sk);
@@ -35,9 +37,13 @@ export const loginWithPrivateKey = (privateKey) => {
   }
 };
 
-// Helper functions
 export const hexToBytes = (hex) => {
   if (!hex) return null;
+  // Remove nsec prefix if present
+  if (hex.startsWith('nsec')) {
+    const decoded = nip19.decode(hex);
+    return decoded.data;
+  }
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
     bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
@@ -50,9 +56,10 @@ export const formatTimestamp = (timestamp) => {
   const now = new Date();
   const diff = now - date;
   
-  if (diff < 60000) return 'just now';
+  if (diff < 60000) return 'now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d`;
   return date.toLocaleDateString();
 };
 

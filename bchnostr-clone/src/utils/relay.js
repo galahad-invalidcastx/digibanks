@@ -4,27 +4,36 @@ class RelayManager {
   constructor() {
     this.pools = new Map();
     this.subscriptions = new Map();
+    this.eventCache = new Map();
+    this.connectedRelays = new Set();
   }
 
   async connectToRelays(relays = DEFAULT_RELAYS) {
-    const WebSocket = window.WebSocket;
-    const connections = relays.map(async (url) => {
+    const connectionPromises = relays.map(async (url) => {
       try {
         const ws = new WebSocket(url);
         
         await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Connection timeout')), 10000);
+          
           ws.onopen = () => {
-            console.log(`Connected to ${url}`);
+            clearTimeout(timeout);
+            console.log(`✅ Connected to ${url}`);
             this.pools.set(url, ws);
+            this.connectedRelays.add(url);
             resolve();
           };
+          
           ws.onerror = (error) => {
-            console.error(`Failed to connect to ${url}:`, error);
+            clearTimeout(timeout);
+            console.error(`❌ Failed to connect to ${url}:`, error);
             reject(error);
           };
+          
           ws.onclose = () => {
-            console.log(`Disconnected from ${url}`);
+            console.log(`🔌 Disconnected from ${url}`);
             this.pools.delete(url);
+            this.connectedRelays.delete(url);
           };
         });
         
@@ -35,48 +44,51 @@ class RelayManager {
       }
     });
     
-    await Promise.allSettled(connections);
-    return this.pools.size > 0;
+    const results = await Promise.allSettled(connectionPromises);
+    const connectedCount = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
+    console.log(`Connected to ${connectedCount}/${relays.length} relays`);
+    return connectedCount;
   }
 
   async publishEvent(event, relays = DEFAULT_RELAYS) {
     const publishPromises = [];
+    let successCount = 0;
     
     for (const relay of relays) {
       const ws = this.pools.get(relay);
       if (ws && ws.readyState === WebSocket.OPEN) {
-        publishPromises.push(
-          new Promise((resolve) => {
-            const message = JSON.stringify(['EVENT', event]);
-            ws.send(message);
-            
-            // Listen for OK response
-            const handler = (e) => {
-              const data = JSON.parse(e.data);
-              if (data[0] === 'OK' && data[1] === event.id) {
-                ws.removeEventListener('message', handler);
-                resolve(true);
-              }
-            };
-            ws.addEventListener('message', handler);
-            
-            // Timeout after 5 seconds
-            setTimeout(() => {
+        const promise = new Promise((resolve) => {
+          const message = JSON.stringify(['EVENT', event]);
+          ws.send(message);
+          
+          const handler = (e) => {
+            const data = JSON.parse(e.data);
+            if (data[0] === 'OK' && data[1] === event.id) {
               ws.removeEventListener('message', handler);
-              resolve(false);
-            }, 5000);
-          })
-        );
+              successCount++;
+              resolve(true);
+            }
+          };
+          
+          ws.addEventListener('message', handler);
+          setTimeout(() => {
+            ws.removeEventListener('message', handler);
+            resolve(false);
+          }, 5000);
+        });
+        
+        publishPromises.push(promise);
       }
     }
     
-    const results = await Promise.all(publishPromises);
-    return results.some(result => result === true);
+    await Promise.all(publishPromises);
+    return successCount;
   }
 
   subscribe(filter, onEvent, relays = DEFAULT_RELAYS) {
-    const subscriptionId = Math.random().toString(36);
+    const subscriptionId = Math.random().toString(36).substring(2, 15);
     const activeSubscriptions = [];
+    let eventCount = 0;
     
     for (const relay of relays) {
       const ws = this.pools.get(relay);
@@ -87,7 +99,11 @@ class RelayManager {
         const messageHandler = (e) => {
           const data = JSON.parse(e.data);
           if (data[0] === 'EVENT' && data[1] === subscriptionId) {
-            onEvent(data[2], relay);
+            if (!this.eventCache.has(data[2].id)) {
+              this.eventCache.set(data[2].id, data[2]);
+              eventCount++;
+              onEvent(data[2], relay);
+            }
           }
         };
         
@@ -102,7 +118,7 @@ class RelayManager {
     return () => {
       const subs = this.subscriptions.get(subscriptionId);
       if (subs) {
-        subs.forEach(({ ws, messageHandler, relay }) => {
+        subs.forEach(({ ws, messageHandler }) => {
           const closeMsg = JSON.stringify(['CLOSE', subscriptionId]);
           ws.send(closeMsg);
           ws.removeEventListener('message', messageHandler);
@@ -112,12 +128,24 @@ class RelayManager {
     };
   }
 
+  getConnectionStatus() {
+    return {
+      total: DEFAULT_RELAYS.length,
+      connected: this.connectedRelays.size,
+      relays: Array.from(this.connectedRelays)
+    };
+  }
+
   disconnect() {
     this.pools.forEach((ws) => {
-      ws.close();
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
     });
     this.pools.clear();
+    this.connectedRelays.clear();
     this.subscriptions.clear();
+    this.eventCache.clear();
   }
 }
 
