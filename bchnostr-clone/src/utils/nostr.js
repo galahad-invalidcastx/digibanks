@@ -1,8 +1,8 @@
-import * as nostr from 'nostr-tools';
+import * as nostrTools from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils';
 
-// Use the correct exported functions
-const { generateSecretKey, getPublicKey, finalizeEvent, nip19 } = nostr;
+const { generateSecretKey, getPublicKey, finalizeEvent } = nostrTools;
+const nip19 = nostrTools.nip19;
 
 export const DEFAULT_RELAYS = [
   'wss://relay.damus.io',

@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { finalizeEvent } from 'nostr-tools';
+import * as nostrTools from 'nostr-tools';
 import { hexToBytes, DEFAULT_RELAYS } from '../utils/nostr';
 import { relayManager } from '../utils/relay';
+
+const { finalizeEvent } = nostrTools;
 
 function ProfileEditor({ user, profile, onClose, onUpdate }) {
   const [formData, setFormData] = useState({

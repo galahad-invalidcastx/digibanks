@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { finalizeEvent } from 'nostr-tools';
+import * as nostrTools from 'nostr-tools';
 import { hexToBytes, DEFAULT_RELAYS } from '../utils/nostr';
 import { relayManager } from '../utils/relay';
+
+const { finalizeEvent } = nostrTools;
 
 function CreatePost({ user, onPostCreated }) {
   const [content, setContent] = useState('');
@@ -47,14 +49,12 @@ function CreatePost({ user, onPostCreated }) {
     <div className="border-b border-[#2F3336] p-4">
       <form onSubmit={handleSubmit}>
         <div className="flex gap-3">
-          {/* Avatar */}
           <div className="flex-shrink-0">
             <div className="w-10 h-10 bg-gradient-to-br from-[#00BA7C] to-[#1D9BF0] rounded-full flex items-center justify-center text-sm font-bold">
               {user.npub?.[6]?.toUpperCase() || 'U'}
             </div>
           </div>
 
-          {/* Input Area */}
           <div className="flex-1">
             <textarea
               value={content}
@@ -65,7 +65,6 @@ function CreatePost({ user, onPostCreated }) {
               maxLength="280"
             />
             
-            {/* Character counter */}
             {content.length > 240 && (
               <div className={`text-right text-xs mt-1 ${
                 content.length > 280 ? 'text-red-500' : 'text-[#71767B]'
@@ -74,7 +73,6 @@ function CreatePost({ user, onPostCreated }) {
               </div>
             )}
 
-            {/* Action buttons */}
             <div className="flex justify-between items-center mt-2">
               <div className="flex gap-1 relative">
                 <button 
