@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import * as nostrTools from 'nostr-tools';
+import { finalizeEvent } from 'nostr-tools';
 import { hexToBytes, DEFAULT_RELAYS } from '../utils/nostr';
 import { relayManager } from '../utils/relay';
-
-const { finalizeEvent } = nostrTools;
 
 function CreatePost({ user, onPostCreated }) {
   const [content, setContent] = useState('');
@@ -75,22 +73,13 @@ function CreatePost({ user, onPostCreated }) {
 
             <div className="flex justify-between items-center mt-2">
               <div className="flex gap-1 relative">
-                <button 
-                  type="button" 
-                  className="p-2 rounded-full active:bg-[#00BA7C]/10 text-[#00BA7C] transition text-xl"
-                >
-                  📷
-                </button>
-                
+                <button type="button" className="p-2 rounded-full active:bg-[#00BA7C]/10 text-[#00BA7C] transition text-xl">📷</button>
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                     className="p-2 rounded-full active:bg-[#00BA7C]/10 text-[#00BA7C] transition text-xl"
-                  >
-                    😊
-                  </button>
-                  
+                  >😊</button>
                   {showEmojiPicker && (
                     <div className="absolute bottom-full left-0 mb-2 bg-black border border-[#2F3336] rounded-xl p-2 z-50">
                       <div className="grid grid-cols-7 gap-1">
@@ -103,26 +92,19 @@ function CreatePost({ user, onPostCreated }) {
                               setShowEmojiPicker(false);
                             }}
                             className="w-10 h-10 hover:bg-white/10 rounded-lg transition text-xl active:scale-95"
-                          >
-                            {emoji}
-                          </button>
+                          >{emoji}</button>
                         ))}
                       </div>
                     </div>
                   )}
                 </div>
               </div>
-              
               <button
                 type="submit"
                 disabled={!content.trim() || isPosting || content.length > 280}
                 className="bg-[#00BA7C] disabled:opacity-50 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1 active:scale-95 transition"
               >
-                {isPosting ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white"></div>
-                ) : (
-                  <span>✨</span>
-                )}
+                {isPosting ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white"></div> : <span>✨</span>}
                 <span>{isPosting ? '' : 'Post'}</span>
               </button>
             </div>

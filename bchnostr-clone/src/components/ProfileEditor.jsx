@@ -1,9 +1,7 @@
 import React, { useState, useRef } from 'react';
-import * as nostrTools from 'nostr-tools';
+import { finalizeEvent } from 'nostr-tools';
 import { hexToBytes, DEFAULT_RELAYS } from '../utils/nostr';
 import { relayManager } from '../utils/relay';
-
-const { finalizeEvent } = nostrTools;
 
 function ProfileEditor({ user, profile, onClose, onUpdate }) {
   const [formData, setFormData] = useState({
@@ -181,11 +179,9 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
 
         {/* Form Fields */}
         <div className="px-4 space-y-4 pb-8">
-          {/* Display Name */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <span className="inline mr-1">👤</span>
-              Display name
+              <span className="inline mr-1">👤</span> Display name
             </label>
             <input
               type="text"
@@ -197,11 +193,9 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
             />
           </div>
 
-          {/* Name/Username */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <span className="inline mr-1">@</span>
-              Name / Username
+              <span className="inline mr-1">@</span> Name / Username
             </label>
             <input
               type="text"
@@ -213,11 +207,9 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
             />
           </div>
 
-          {/* Bio */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <span className="inline mr-1">ℹ️</span>
-              Bio
+              <span className="inline mr-1">ℹ️</span> Bio
             </label>
             <textarea
               value={formData.about}
@@ -232,11 +224,9 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
             </div>
           </div>
 
-          {/* NIP-05 */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <span className="inline mr-1">🔗</span>
-              NIP-05 Identifier
+              <span className="inline mr-1">🔗</span> NIP-05 Identifier
             </label>
             <input
               type="text"
@@ -250,11 +240,9 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
             </p>
           </div>
 
-          {/* Website */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <span className="inline mr-1">🌐</span>
-              Website
+              <span className="inline mr-1">🌐</span> Website
             </label>
             <input
               type="url"
@@ -265,11 +253,9 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
             />
           </div>
 
-          {/* Lightning Address */}
           <div>
             <label className="block text-sm font-medium mb-1 text-[#71767B]">
-              <span className="inline mr-1">⚡</span>
-              Lightning Address (BCH)
+              <span className="inline mr-1">⚡</span> Lightning Address (BCH)
             </label>
             <input
               type="text"
@@ -283,7 +269,6 @@ function ProfileEditor({ user, profile, onClose, onUpdate }) {
             </p>
           </div>
 
-          {/* Error/Success Messages */}
           {error && (
             <div className="bg-red-500/10 border border-red-500 rounded-lg p-3 text-red-500 text-sm">
               {error}
