@@ -1,17 +1,31 @@
 import { bytesToHex } from '@noble/hashes/utils';
+import { bech32 } from 'bech32';
 
-const generateRandomBytes = () => {
-  const bytes = new Uint8Array(32);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes);
-  } else {
-    for (let i = 0; i < 32; i++) {
-      bytes[i] = Math.floor(Math.random() * 256);
+// Manual bech32 decoder for nsec keys (same as bchnostr)
+const decodeNsec = (nsecKey) => {
+  try {
+    if (!nsecKey || !nsecKey.startsWith('nsec1')) {
+      throw new Error('Invalid nsec key format');
     }
+    
+    // Decode bech32
+    const decoded = bech32.decode(nsecKey);
+    const data = bech32.fromWords(decoded.words);
+    
+    // Should be 32 bytes (private key)
+    if (data.length !== 32) {
+      console.error('Expected 32 bytes, got', data.length);
+      return null;
+    }
+    
+    return new Uint8Array(data);
+  } catch (error) {
+    console.error('Bech32 decode error:', error);
+    return null;
   }
-  return bytes;
 };
 
+// Import nostr-tools for other functions
 let nostrTools = null;
 let getPublicKey = null;
 let finalizeEvent = null;
@@ -40,7 +54,8 @@ export const DEFAULT_RELAYS = [
 export const generateNewKey = async () => {
   try {
     await initNostr();
-    const sk = generateRandomBytes();
+    const sk = new Uint8Array(32);
+    crypto.getRandomValues(sk);
     const privateKeyHex = bytesToHex(sk);
     const pk = getPublicKey(sk);
     
@@ -52,13 +67,7 @@ export const generateNewKey = async () => {
     };
   } catch (error) {
     console.error('Generation error:', error);
-    const sk = generateRandomBytes();
-    return {
-      privateKey: bytesToHex(sk),
-      publicKey: 'error',
-      npub: '',
-      nsec: ''
-    };
+    return null;
   }
 };
 
@@ -67,79 +76,42 @@ export const loginWithPrivateKey = async (privateKeyInput) => {
     await initNostr();
     
     console.log('=== DEBUG IMPORT ===');
+    console.log('Key type:', privateKeyInput.startsWith('nsec') ? 'nsec' : 'hex');
     console.log('Key length:', privateKeyInput.length);
     
     let sk;
     let privateKeyHex;
     
     if (privateKeyInput.startsWith('nsec1')) {
-      try {
-        const decoded = nip19.decode(privateKeyInput);
-        console.log('Decoded type:', decoded?.type);
-        
-        if (decoded && decoded.data) {
-          // Convert to Uint8Array
-          let rawData;
-          if (decoded.data instanceof Uint8Array) {
-            rawData = decoded.data;
-          } else if (Array.isArray(decoded.data)) {
-            rawData = new Uint8Array(decoded.data);
-          } else if (typeof decoded.data === 'object' && decoded.data.buffer) {
-            rawData = new Uint8Array(decoded.data);
-          } else {
-            rawData = new Uint8Array(Object.values(decoded.data));
-          }
-          
-          console.log('Raw data length:', rawData.length);
-          
-          // If the data is 64 bytes, we need to extract the actual private key
-          // The first 32 bytes might be the actual key, or it might be a different format
-          if (rawData.length === 64) {
-            // Try taking first 32 bytes
-            sk = rawData.slice(0, 32);
-            console.log('Trimmed 64-byte to 32-byte private key');
-          } else if (rawData.length === 32) {
-            sk = rawData;
-          } else {
-            console.error('Unexpected data length:', rawData.length);
-            return null;
-          }
-          
-          privateKeyHex = bytesToHex(sk);
-          console.log('Private key hex length:', privateKeyHex.length);
-          console.log('Private key hex (first 20):', privateKeyHex.substring(0, 20) + '...');
-        } else {
-          console.error('Decode returned no data');
-          return null;
-        }
-      } catch (decodeError) {
-        console.error('Decode error:', decodeError.message);
+      // Use our manual bech32 decoder (same as bchnostr)
+      const decoded = decodeNsec(privateKeyInput);
+      if (decoded && decoded.length === 32) {
+        sk = decoded;
+        privateKeyHex = bytesToHex(sk);
+        console.log('✅ nsec decoded successfully using bech32');
+        console.log('Private key hex:', privateKeyHex.substring(0, 20) + '...');
+      } else {
+        console.error('❌ Failed to decode nsec key');
         return null;
       }
     } 
     else if (/^[0-9a-f]{64}$/i.test(privateKeyInput)) {
       privateKeyHex = privateKeyInput.toLowerCase();
       sk = hexToBytes(privateKeyHex);
-      console.log('Hex conversion successful');
+      console.log('✅ Hex key accepted');
     }
     else {
-      console.error('Unknown format');
+      console.error('❌ Unknown format');
       return null;
     }
     
-    if (!sk || sk.length === 0) {
-      console.error('No private key generated');
-      return null;
-    }
-    
-    console.log('Final private key bytes length:', sk.length);
-    if (sk.length !== 32) {
-      console.error('Private key must be 32 bytes, got:', sk.length);
+    if (!sk || sk.length !== 32) {
+      console.error('Invalid private key length:', sk?.length);
       return null;
     }
     
     const pk = getPublicKey(sk);
-    console.log('Public key generated:', pk.substring(0, 16) + '...');
+    console.log('✅ Public key generated:', pk.substring(0, 16) + '...');
     
     return {
       privateKey: privateKeyHex,
