@@ -1,5 +1,8 @@
 import { DEFAULT_RELAYS } from './nostr';
 
+// Make sure WebSocket is available
+const WebSocket = typeof window !== 'undefined' ? window.WebSocket : require('ws');
+
 class RelayManager {
   constructor() {
     this.pools = new Map();

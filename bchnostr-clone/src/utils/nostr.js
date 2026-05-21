@@ -1,8 +1,6 @@
-import * as nostrTools from 'nostr-tools';
+import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools';
+import { nip19 } from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils';
-
-const { generateSecretKey, getPublicKey, finalizeEvent } = nostrTools;
-const nip19 = nostrTools.nip19;
 
 export const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
@@ -17,40 +15,72 @@ export const DEFAULT_RELAYS = [
 export const generateNewKey = () => {
   const sk = generateSecretKey();
   const pk = getPublicKey(sk);
+  const privateKeyHex = bytesToHex(sk);
   return {
-    privateKey: bytesToHex(sk),
+    privateKey: privateKeyHex,
     publicKey: pk,
-    npub: nip19.npubEncode(pk)
+    npub: nip19.npubEncode(pk),
+    nsec: nip19.nsecEncode(sk)
   };
 };
 
-export const loginWithPrivateKey = (privateKey) => {
+export const loginWithPrivateKey = (privateKeyInput) => {
   try {
     let sk;
-    if (privateKey.startsWith('nsec')) {
-      const decoded = nip19.decode(privateKey);
+    let privateKeyHex;
+    
+    console.log('Attempting to login with key:', privateKeyInput.substring(0, 10) + '...');
+    
+    // Check if it's an nsec key
+    if (privateKeyInput.startsWith('nsec')) {
+      console.log('Detected nsec key format');
+      const decoded = nip19.decode(privateKeyInput);
       sk = decoded.data;
-    } else {
-      sk = hexToBytes(privateKey);
+      privateKeyHex = bytesToHex(sk);
+      console.log('Successfully decoded nsec, public key generated');
+    } 
+    // Check if it's a hex private key (64 characters hex)
+    else if (/^[0-9a-f]{64}$/i.test(privateKeyInput)) {
+      console.log('Detected hex key format');
+      privateKeyHex = privateKeyInput.toLowerCase();
+      sk = hexToBytes(privateKeyHex);
+      if (!sk || sk.length === 0) {
+        throw new Error('Invalid hex key');
+      }
+      console.log('Successfully converted hex key');
     }
+    else {
+      console.error('Invalid key format - must start with nsec or be 64 hex chars');
+      return null;
+    }
+    
+    // Generate public key from private key
     const pk = getPublicKey(sk);
+    console.log('Generated public key:', pk.substring(0, 10) + '...');
+    
     return {
-      privateKey: bytesToHex(sk),
+      privateKey: privateKeyHex,
       publicKey: pk,
-      npub: nip19.npubEncode(pk)
+      npub: nip19.npubEncode(pk),
+      nsec: nip19.nsecEncode(sk)
     };
   } catch (error) {
-    console.error('Invalid private key:', error);
+    console.error('Login error details:', error);
     return null;
   }
 };
 
 export const hexToBytes = (hex) => {
   if (!hex) return null;
-  if (hex.startsWith('nsec')) {
-    const decoded = nip19.decode(hex);
-    return decoded.data;
+  
+  // Remove any spaces or newlines
+  hex = hex.trim().replace(/\s/g, '');
+  
+  // Ensure even length
+  if (hex.length % 2 !== 0) {
+    hex = '0' + hex;
   }
+  
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
     bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
@@ -72,5 +102,8 @@ export const formatTimestamp = (timestamp) => {
 
 export const shortenKey = (key) => {
   if (!key) return '';
+  if (key.startsWith('npub')) {
+    return `${key.slice(0, 12)}...${key.slice(-8)}`;
+  }
   return `${key.slice(0, 8)}...${key.slice(-8)}`;
 };
