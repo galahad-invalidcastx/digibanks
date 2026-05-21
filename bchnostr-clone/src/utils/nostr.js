@@ -68,7 +68,6 @@ export const loginWithPrivateKey = async (privateKeyInput) => {
     
     console.log('=== DEBUG IMPORT ===');
     console.log('Key length:', privateKeyInput.length);
-    console.log('Key prefix:', privateKeyInput.substring(0, 8));
     
     let sk;
     let privateKeyHex;
@@ -79,19 +78,36 @@ export const loginWithPrivateKey = async (privateKeyInput) => {
         console.log('Decoded type:', decoded?.type);
         
         if (decoded && decoded.data) {
-          // Convert to Uint8Array if it's not already
+          // Convert to Uint8Array
+          let rawData;
           if (decoded.data instanceof Uint8Array) {
-            sk = decoded.data;
+            rawData = decoded.data;
           } else if (Array.isArray(decoded.data)) {
-            sk = new Uint8Array(decoded.data);
+            rawData = new Uint8Array(decoded.data);
           } else if (typeof decoded.data === 'object' && decoded.data.buffer) {
-            sk = new Uint8Array(decoded.data);
+            rawData = new Uint8Array(decoded.data);
           } else {
-            // Try to convert from any array-like object
-            sk = new Uint8Array(Object.values(decoded.data));
+            rawData = new Uint8Array(Object.values(decoded.data));
           }
+          
+          console.log('Raw data length:', rawData.length);
+          
+          // If the data is 64 bytes, we need to extract the actual private key
+          // The first 32 bytes might be the actual key, or it might be a different format
+          if (rawData.length === 64) {
+            // Try taking first 32 bytes
+            sk = rawData.slice(0, 32);
+            console.log('Trimmed 64-byte to 32-byte private key');
+          } else if (rawData.length === 32) {
+            sk = rawData;
+          } else {
+            console.error('Unexpected data length:', rawData.length);
+            return null;
+          }
+          
           privateKeyHex = bytesToHex(sk);
-          console.log('Decode successful! Private key hex length:', privateKeyHex.length);
+          console.log('Private key hex length:', privateKeyHex.length);
+          console.log('Private key hex (first 20):', privateKeyHex.substring(0, 20) + '...');
         } else {
           console.error('Decode returned no data');
           return null;
@@ -116,7 +132,11 @@ export const loginWithPrivateKey = async (privateKeyInput) => {
       return null;
     }
     
-    console.log('Private key bytes length:', sk.length);
+    console.log('Final private key bytes length:', sk.length);
+    if (sk.length !== 32) {
+      console.error('Private key must be 32 bytes, got:', sk.length);
+      return null;
+    }
     
     const pk = getPublicKey(sk);
     console.log('Public key generated:', pk.substring(0, 16) + '...');
