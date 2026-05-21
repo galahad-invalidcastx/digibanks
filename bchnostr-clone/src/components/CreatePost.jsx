@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { finalizeEvent } from 'nostr-tools';
+import * as nostr from 'nostr-tools';
 import { hexToBytes, DEFAULT_RELAYS } from '../utils/nostr';
 import { relayManager } from '../utils/relay';
+
+
+const finalizeEvent = nostr.finalizeEvent;
 
 function CreatePost({ user, onPostCreated }) {
   const [content, setContent] = useState('');
@@ -23,7 +26,7 @@ function CreatePost({ user, onPostCreated }) {
       };
 
       const privateKeyBytes = hexToBytes(user.privateKey);
-      const signedEvent = finalizeEvent(event, privateKeyBytes);
+      const signedEvent = nostr.finalizeEvent(event, privateKeyBytes);
 
       const successCount = await relayManager.publishEvent(signedEvent, DEFAULT_RELAYS);
       

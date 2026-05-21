@@ -13,71 +13,82 @@ function Login({ onLogin }) {
   const addDebugLog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
     setDebugLogs(prev => [...prev, { message, type, timestamp }]);
-    // Keep only last 50 logs
     setDebugLogs(prev => prev.slice(-50));
   };
 
-  const handleGenerate = () => {
-    setLoading(true);
-    setError('');
-    addDebugLog('Generating new account...', 'info');
-    
-    try {
-      const newUser = generateNewKey();
-      if (newUser && newUser.privateKey) {
-        addDebugLog(`✅ Account generated successfully!`, 'success');
-        addDebugLog(`Public key: ${newUser.publicKey.substring(0, 16)}...`, 'info');
-        addDebugLog(`⚠️ IMPORTANT: Save your nsec key!`, 'error');
-        
-        // Show the nsec key to the user
-        alert(`🔑 YOUR PRIVATE KEY - SAVE THIS!\n\n${newUser.nsec}\n\n⚠️ This key cannot be recovered if lost!\n\nClick OK to continue.`);
-        onLogin(newUser);
-      } else {
-        addDebugLog('❌ Failed to generate key - returned null', 'error');
-        setError('Failed to generate key');
-      }
-    } catch (err) {
-      addDebugLog(`❌ Generation error: ${err.message}`, 'error');
-      setError('Failed to generate key. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleImport = () => {
-    if (!privateKey.trim()) {
-      setError('Please enter your private key');
-      addDebugLog('❌ Import failed: No key entered', 'error');
-      return;
-    }
-    
-    setLoading(true);
-    setError('');
-    const trimmedKey = privateKey.trim();
-    
-    addDebugLog(`🔑 Attempting to import key...`, 'info');
-    addDebugLog(`Key length: ${trimmedKey.length} characters`, 'info');
-    addDebugLog(`Key prefix: ${trimmedKey.substring(0, 8)}...`, 'info');
-    
-    try {
-      const user = loginWithPrivateKey(trimmedKey);
+const handleGenerate = async () => {
+  setLoading(true);
+  setError('');
+  addDebugLog('Generating new account...', 'info');
+  
+  try {
+    const newUser = await generateNewKey();
+    if (newUser && newUser.privateKey) {
+      addDebugLog(`✅ Account generated successfully!`, 'success');
+      addDebugLog(`Public key: ${newUser.publicKey.substring(0, 16)}...`, 'info');
       
-      if (user && user.publicKey) {
-        addDebugLog(`✅ Login successful!`, 'success');
-        addDebugLog(`Public key: ${user.publicKey.substring(0, 16)}...`, 'success');
-        addDebugLog(`NPUB: ${user.npub.substring(0, 16)}...`, 'info');
-        onLogin(user);
-      } else {
-        addDebugLog(`❌ Invalid private key format or content`, 'error');
-        setError('Invalid private key. Make sure you entered the correct nsec or hex key.');
-      }
-    } catch (err) {
-      addDebugLog(`❌ Import error: ${err.message}`, 'error');
-      setError('Error importing key: ' + err.message);
-    } finally {
-      setLoading(false);
+      alert(`🔑 YOUR PRIVATE KEY - SAVE THIS!\n\n${newUser.nsec}\n\n⚠️ This key cannot be recovered if lost!\n\nClick OK to continue.`);
+      onLogin(newUser);
+    } else {
+      addDebugLog('❌ Failed to generate key', 'error');
+      setError('Failed to generate key');
     }
-  };
+  } catch (err) {
+    addDebugLog(`❌ Generation error: ${err.message}`, 'error');
+    setError('Failed to generate key. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleImport = async () => {
+  if (!privateKey.trim()) {
+    setError('Please enter your private key');
+    addDebugLog('❌ Import failed: No key entered', 'error');
+    return;
+  }
+  
+  setLoading(true);
+  setError('');
+  const trimmedKey = privateKey.trim();
+  
+  addDebugLog(`🔑 Attempting to import key...`, 'info');
+  addDebugLog(`Key length: ${trimmedKey.length} characters`, 'info');
+  addDebugLog(`Key prefix: ${trimmedKey.substring(0, 8)}...`, 'info');
+  addDebugLog(`Full key (first 20 chars): ${trimmedKey.substring(0, 20)}...`, 'info');
+  
+  try {
+    // Call the login function and capture any errors
+    let user;
+    let errorMessage = null;
+    
+    try {
+      user = await loginWithPrivateKey(trimmedKey);
+    } catch (decodeErr) {
+      errorMessage = decodeErr.message;
+      addDebugLog(`❌ Decode exception: ${errorMessage}`, 'error');
+    }
+    
+    if (user && user.publicKey && user.publicKey !== 'error') {
+      addDebugLog(`✅ Login successful!`, 'success');
+      addDebugLog(`Public key: ${user.publicKey.substring(0, 16)}...`, 'success');
+      onLogin(user);
+    } else {
+      addDebugLog(`❌ Failed to decode key`, 'error');
+      if (errorMessage) {
+        addDebugLog(`Error details: ${errorMessage}`, 'error');
+      }
+      addDebugLog(`💡 This nsec key works on bchnostr.com but not here`, 'info');
+      addDebugLog(`💡 The key length is ${trimmedKey.length} chars`, 'info');
+      setError('Failed to decode key. The format might be different from what nostr-tools expects.');
+    }
+  } catch (err) {
+    addDebugLog(`❌ Import error: ${err.message}`, 'error');
+    setError('Error importing key: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
@@ -173,8 +184,9 @@ function Login({ onLogin }) {
               
               <div className="text-xs text-[#71767B] space-y-1">
                 <p>📝 Enter your key in one of these formats:</p>
-                <p className="font-mono">• nsec1xxxxxxxx... (recommended)</p>
+                <p className="font-mono">• nsec1xxxxxxxx... (starts with nsec1)</p>
                 <p className="font-mono">• 64-character hex string</p>
+                <p className="text-[#00BA7C] mt-2">💡 Tip: The nsec key should be 63+ characters long</p>
               </div>
             </div>
           )}
@@ -185,7 +197,6 @@ function Login({ onLogin }) {
         </p>
       </div>
 
-      {/* Debug Panel */}
       <DebugPanel logs={debugLogs} />
     </div>
   );
