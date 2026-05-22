@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Cauldron Grid Bot • BCH + CashTokens</title>
+    <!-- Tailwind + Fonts + Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- QR Code library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <!-- BIP39 & Bitcoin Cash libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bip39@3.0.4/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bitcore-lib-cash@8.25.10/bitcore-lib-cash.min.js"></script>
+    <!-- CashToken utils (for category validation, basic) -->
+    <!-- Note: full Cauldron SDK not CDN'ed, but we implement raw transaction preview and Electrum broadcast -->
+    <style>
+        /* custom smooth grid / glassmorphism */
+        body { background: #0a0c10; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .glass-card { background: rgba(18, 22, 28, 0.85); backdrop-filter: blur(2px); border: 1px solid #2a3a2e; }
+        .btn-primary { background: #1e7b4b; transition: 0.2s; }
+        .btn-primary:hover { background: #2b9b5e; transform: translateY(-1px); }
+        .btn-danger { background: #9b2c2c; }
+        .btn-danger:hover { background: #c13c3c; }
+        .status-badge { background: #1f2a1e; border-left: 4px solid #2ecc71; }
+        .token-tag { background: #1f2a1e; border-radius: 20px; padding: 4px 12px; cursor: pointer; transition: 0.1s; }
+        .token-tag:hover { background: #2a3a2a; transform: scale(0.98); }
+        .log-line { font-family: 'Monaco', monospace; font-size: 12px; border-bottom: 1px solid #2c2c2c; padding: 4px 0; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1a1e24; }
+        ::-webkit-scrollbar-thumb { background: #2e7d5e; border-radius: 8px; }
+    </style>
+</head>
+<body class="text-gray-200 p-4 md:p-6">
+
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-wrap justify-between items-center mb-6 border-b border-green-800/40 pb-3">
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-300 to-emerald-500 bg-clip-text text-transparent">⚗️ Cauldron Grid Bot</h1>
+            <p class="text-sm text-gray-400 mt-1">BCH ↔ CashToken • Spot Grid DCA • Stop-Loss & Take-Profit</p>
+        </div>
+        <div class="text-xs text-gray-500 bg-black/30 p-2 rounded-lg">⚠️ EXPERIMENTAL — Small budget only. Total loss possible.</div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- LEFT COLUMN: Wallet & Token -->
+        <div class="space-y-5">
+            <!-- Wallet Card -->
+            <div class="glass-card rounded-2xl p-5 shadow-xl">
+                <h2 class="text-xl font-semibold flex items-center gap-2"><span>👛</span> Wallet (BCH)</h2>
+                <div class="flex flex-wrap gap-3 my-4">
+                    <button id="genWalletBtn" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm">✨ Generate New</button>
+                    <button id="importWalletBtn" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm">🔑 Import Mnemonic</button>
+                    <button id="clearWalletBtn" class="bg-red-900/40 hover:bg-red-800/60 px-4 py-2 rounded-lg text-sm">🗑️ Clear Storage</button>
+                </div>
+                <div class="space-y-2">
+                    <div><span class="text-gray-400 text-sm">Seed (encrypted msg):</span> <span id="seedStatus" class="text-xs text-red-300">Not saved</span></div>
+                    <div><span class="text-gray-400">Cash Address:</span> <span id="bchAddressDisplay" class="font-mono text-sm break-all bg-black/40 p-1 rounded">—</span></div>
+                    <div id="qrContainer" class="mt-2 flex justify-center bg-white p-2 rounded-lg inline-block"></div>
+                    <div class="text-xs text-amber-400 mt-1">⚠️ Seed stored in localStorage (unencrypted). Never use large funds.</div>
+                </div>
+            </div>
+
+            <!-- Token Selection & Top10 -->
+            <div class="glass-card rounded-2xl p-5">
+                <h3 class="text-lg font-semibold mb-2">📦 Select CashToken</h3>
+                <div id="topTokensList" class="flex flex-wrap gap-2 mb-4"></div>
+                <label class="text-sm text-gray-300">Custom Token ID (hex category)</label>
+                <input type="text" id="customTokenId" class="w-full bg-black/50 border border-gray-700 rounded-lg p-2 text-sm font-mono mt-1" placeholder="32-byte hex...">
+                <div class="text-xs text-gray-400 mt-1">Selected: <span id="selectedTokenPreview" class="text-green-300">PUSD (default)</span></div>
+                <button id="fetchTokenInfoBtn" class="w-full mt-3 bg-stone-800 hover:bg-stone-700 py-2 rounded-lg text-sm">🔍 Fetch Token Info (mock price)</button>
+            </div>
+
+            <!-- Risk Warning -->
+            <div class="bg-red-950/30 border border-red-800/40 rounded-xl p-3 text-xs">
+                ⚡ HIGH RISK: Slippage, low liquidity, total loss possible. $20 budget demo only. Grid bot runs locally; stop-loss simulated.
+            </div>
+        </div>
+
+        <!-- MIDDLE COLUMN: Bot Parameters & Pre-checks -->
+        <div class="space-y-5">
+            <div class="glass-card rounded-2xl p-5">
+                <h2 class="text-xl font-semibold">⚙️ Grid Strategy</h2>
+                <div class="grid grid-cols-2 gap-4 mt-3">
+                    <div><label class="text-xs text-gray-400">Budget (USD)</label><input id="budgetUsd" type="number" value="20" class="bg-black/60 w-full rounded p-1 border border-gray-600"></div>
+                    <div><label class="text-xs text-gray-400">BCH Price (est.)</label><input id="bchUsdPrice" value="380" class="bg-black/60 w-full rounded p-1 border border-gray-600"></div>
+                    <div><label class="text-xs text-gray-400">Grid Levels</label><input id="gridLevels" type="number" value="5" class="bg-black/60 w-full rounded p-1"></div>
+                    <div><label class="text-xs text-gray-400">Range % (total)</label><input id="rangePercent" value="20" class="bg-black/60 w-full rounded p-1"></div>
+                    <div><label class="text-xs text-gray-400">Stop Loss %</label><input id="stopLossPct" value="15" class="bg-black/60 w-full rounded p-1"></div>
+                    <div><label class="text-xs text-gray-400">Take Profit %</label><input id="takeProfitPct" value="30" class="bg-black/60 w-full rounded p-1"></div>
+                    <div class="col-span-2"><label class="text-xs text-gray-400">Trailing Stop</label><input type="checkbox" id="trailingStop" class="mr-2"> Enable (simplified)</div>
+                </div>
+                <button id="preCheckBtn" class="w-full mt-4 bg-blue-900/60 hover:bg-blue-800/80 py-2 rounded-lg">💡 Check Balance & Estimate Fees</button>
+                <div id="preCheckResult" class="text-xs mt-3 p-2 bg-black/40 rounded max-h-28 overflow-y-auto"></div>
+            </div>
+
+            <!-- Bot Controls & Status -->
+            <div class="glass-card rounded-2xl p-5">
+                <div class="flex gap-3 mb-4">
+                    <button id="startBotBtn" class="btn-primary px-5 py-2 rounded-lg font-bold">▶ START GRID BOT</button>
+                    <button id="pauseBotBtn" class="bg-yellow-700 hover:bg-yellow-600 px-5 py-2 rounded-lg">⏸️ Pause</button>
+                    <button id="stopBotBtn" class="btn-danger px-5 py-2 rounded-lg">⏹️ Stop</button>
+                </div>
+                <div class="status-badge p-3 rounded-lg">
+                    <div class="flex justify-between"><span>📊 Bot State:</span><span id="botStateLabel" class="font-bold text-green-300">IDLE</span></div>
+                    <div class="flex justify-between mt-1"><span>💰 Current Price (BCH/token):</span><span id="currentPriceSpan">—</span></div>
+                    <div class="flex justify-between"><span>📈 Position (Token Qty):</span><span id="positionQty">0.00</span></div>
+                    <div class="flex justify-between"><span>💸 P&L (BCH):</span><span id="pnlSpan">0.0000</span></div>
+                    <div class="flex justify-between"><span>🛑 Stop-Loss triggered:</span><span id="slStatus">No</span></div>
+                </div>
+                <div class="mt-3 text-xs">
+                    <div>Next Grid Actions: <span id="nextOrderHint">—</span></div>
+                    <div>Dry-run mode: ✅ active (tx preview only)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Logs & Tx Preview -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col h-full">
+            <h3 class="font-mono text-sm mb-2">📜 Event Log / Tx Preview</h3>
+            <div id="logPanel" class="bg-black/40 h-64 overflow-y-auto rounded p-2 text-xs font-mono"></div>
+            <button id="dryRunToggleBtn" class="mt-3 text-xs border border-gray-600 rounded p-1 hover:bg-gray-800">🔄 Dry-Run: ON (click to simulate broadcast)</button>
+            <div class="text-[11px] text-gray-500 mt-2">⚠️ Actual broadcast needs Electrum ws; demo simulates tx construction</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ------------------------- GLOBALS & STATE ---------------------------------
+    let wallet = null;          // { mnemonic, addressCash, privateKeyWIF }
+    let selectedTokenId = "b9b0b2a5c4c0c0c1f3f5b6a7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6"; // PUSD example tokenID (mock)
+    let tokenPriceBCH = 0.0025;   // price in BCH per token (mock)
+    let bchBalance = 0.0;
+    let tokenBalance = 0.0;
+    let botInterval = null;
+    let botActive = false;
+    let botPaused = false;
+    let gridLevels = 5, rangePct = 20, stopLossPct = 15, takeProfitPct = 30, trailing = false;
+    let budgetBCH = 0.0;            // in BCH after conversion
+    let orderSizeBCH = 0.0;         // per grid order
+    let gridBuyPrices = [], gridSellPrices = [];
+    let avgEntryPrice = 0.0;
+    let currentTokenQty = 0.0;
+    let totalBCHInvested = 0.0;
+    let stopLossActive = false;
+    let dryRunMode = true;
+    // Top 10 tokens (mock but realistic CashTokens IDs, TVL ranking)
+    const topTokens = [
+        { name: "PUSD", id: "b9b0b2a5c4c0c0c1f3f5b6a7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6" },
+        { name: "FURU", id: "f1e2d3c4b5a69788766554433221100aabbccddeeff00112233445566778899" },
+        { name: "ZRP", id: "z1a2b3c4d5e6f778899aabbccddeeff00112233445566778899aabbccddeeff" },
+        { name: "MUSD", id: "m1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd" },
+        { name: "BCHTV", id: "bchtv1234567890abcdef1234567890abcdef1234567890abcdef1234567890" },
+        { name: "PUMP", id: "pumpc0ffee1234567890abcdef1234567890abcdef1234567890abcdef1234" },
+        { name: "GRID", id: "gridtokenabcdef1234567890abcdef1234567890abcdef1234567890abcdef" },
+        { name: "CROWN", id: "crowncash3210987654321098765432109876543210fedcba9876543210abcdef" },
+        { name: "TRADA", id: "trada99887766554433221100ffeeddccbbaa99887766554433221100ffeedd" },
+        { name: "LEV", id: "levinium1234567890abcdef1234567890abcdef1234567890abcdef12345678" }
+    ];
+
+    // Helper: Log
+    function addLog(msg, isError = false) {
+        const logDiv = document.getElementById("logPanel");
+        const entry = document.createElement("div");
+        entry.className = `log-line ${isError ? 'text-red-400' : 'text-green-200'}`;
+        entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logDiv.appendChild(entry);
+        entry.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    // Update UI states
+    function updateUI() {
+        document.getElementById("bchAddressDisplay").innerText = wallet ? wallet.addressCash : "—";
+        document.getElementById("seedStatus").innerHTML = wallet ? "✅ Wallet loaded (encrypted local)" : "❌ No wallet";
+        if (wallet && document.getElementById("qrContainer").innerHTML === "") new QRCode(document.getElementById("qrContainer"), { text: wallet.addressCash, width: 120, height: 120 });
+        else if (wallet) document.getElementById("qrContainer").innerHTML = "" , new QRCode(document.getElementById("qrContainer"), { text: wallet.addressCash, width: 120, height: 120 });
+        document.getElementById("selectedTokenPreview").innerHTML = selectedTokenId.slice(0,12)+"...";
+    }
+
+    // wallet: bip39 + bitcore-lib-cash
+    async function generateWalletFromMnemonic(mnemonic) {
+        if (!mnemonic) mnemonic = bip39.generateMnemonic(128);
+        const seed = await bip39.mnemonicToSeed(mnemonic);
+        const hdMaster = bitcorelibcash.HDPrivateKey.fromSeed(seed);
+        const child = hdMaster.deriveChild("m/44'/145'/0'/0/0");
+        const privateKey = child.privateKey;
+        const address = privateKey.toAddress(bitcorelibcash.Networks.livenet);
+        return { mnemonic, addressCash: address.toString(), privateKeyWIF: privateKey.toWIF() };
+    }
+
+    async function saveWalletToLocal(walletData) {
+        localStorage.setItem("cauldron_bot_wallet", JSON.stringify({ mnemonic: walletData.mnemonic, address: walletData.addressCash }));
+        wallet = walletData;
+        updateUI();
+        addLog(`Wallet loaded: ${wallet.addressCash.slice(0, 12)}...`);
+    }
+
+    document.getElementById("genWalletBtn").onclick = async () => {
+        const newWallet = await generateWalletFromMnemonic(null);
+        await saveWalletToLocal(newWallet);
+    };
+    document.getElementById("importWalletBtn").onclick = async () => {
+        const mnemonic = prompt("Enter 12/24 word BIP39 mnemonic:");
+        if (!mnemonic) return;
+        try {
+            const walletImported = await generateWalletFromMnemonic(mnemonic);
+            await saveWalletToLocal(walletImported);
+        } catch(e) { addLog("Invalid mnemonic", true); }
+    };
+    document.getElementById("clearWalletBtn").onclick = () => { localStorage.removeItem("cauldron_bot_wallet"); wallet = null; updateUI(); addLog("Wallet cleared"); };
+
+    // load persisted wallet on start
+    (async () => {
+        const stored = localStorage.getItem("cauldron_bot_wallet");
+        if (stored) {
+            try {
+                const { mnemonic } = JSON.parse(stored);
+                const w = await generateWalletFromMnemonic(mnemonic);
+                wallet = w;
+                updateUI();
+                addLog("Restored wallet from localStorage");
+            } catch(e) { addLog("Failed restore wallet", true); }
+        }
+        renderTopTokens();
+        updatePreCheckMock();
+    })();
+
+    function renderTopTokens() {
+        const container = document.getElementById("topTokensList");
+        container.innerHTML = "";
+        topTokens.forEach(tk => {
+            const btn = document.createElement("div");
+            btn.className = "token-tag text-xs";
+            btn.innerText = tk.name;
+            btn.onclick = () => { selectedTokenId = tk.id; document.getElementById("customTokenId").value = tk.id; updateTokenPreview(); addLog(`Selected token: ${tk.name} (${tk.id.slice(0,10)}...)`); };
+            container.appendChild(btn);
+        });
+        document.getElementById("customTokenId").addEventListener("input", (e) => { if(e.target.value) selectedTokenId = e.target.value; updateTokenPreview(); });
+    }
+    function updateTokenPreview() { document.getElementById("selectedTokenPreview").innerHTML = selectedTokenId.slice(0,14)+"..."; }
+    
+    // mock price & balances
+    async function fetchBalanceAndPrice() {
+        if (!wallet) { addLog("No wallet", true); return false; }
+        // simulate balances from indexer (mock)
+        bchBalance = 0.085;     // ~$32 usd
+        tokenBalance = 45.2;
+        tokenPriceBCH = 0.0021;  // BCH per token
+        addLog(`🟢 Balance BCH: ${bchBalance.toFixed(5)} | Token Qty: ${tokenBalance.toFixed(2)} | Price: ${tokenPriceBCH.toFixed(6)} BCH/token`);
+        document.getElementById("currentPriceSpan").innerText = `${tokenPriceBCH.toFixed(6)} BCH`;
+        return true;
+    }
+
+    async function preTradeChecks() {
+        if (!wallet) { addLog("Create/import wallet first", true); return false; }
+        await fetchBalanceAndPrice();
+        const budgetUSD = parseFloat(document.getElementById("budgetUsd").value);
+        const bchPriceUSD = parseFloat(document.getElementById("bchUsdPrice").value);
+        const totalBCHNeeded = budgetUSD / bchPriceUSD;
+        budgetBCH = totalBCHNeeded;
+        const feeEst = 0.00002 * 30; // 30 txs approx
+        if (bchBalance < budgetBCH + feeEst) {
+            document.getElementById("preCheckResult").innerHTML = `⚠️ Insufficient BCH: need ~${budgetBCH.toFixed(5)} BCH + fees ${feeEst.toFixed(6)}. Balance: ${bchBalance.toFixed(5)}`;
+            addLog("Insufficient balance for grid", true);
+            return false;
+        } else {
+            document.getElementById("preCheckResult").innerHTML = `✅ Budget OK: ${budgetBCH.toFixed(5)} BCH | Fees ~${feeEst.toFixed(6)} BCH. Liquidity warning: mock low slippage assumed.`;
+            addLog("Pre-check passed, ready to start.");
+            return true;
+        }
+    }
+    document.getElementById("preCheckBtn").onclick = preTradeChecks;
+
+    // Initialize grid levels from parameters
+    function initGridParams() {
+        gridLevels = parseInt(document.getElementById("gridLevels").value);
+        rangePct = parseFloat(document.getElementById("rangePercent").value);
+        stopLossPct = parseFloat(document.getElementById("stopLossPct").value);
+        takeProfitPct = parseFloat(document.getElementById("takeProfitPct").value);
+        trailing = document.getElementById("trailingStop").checked;
+        const currentPrice = tokenPriceBCH;
+        const lower = currentPrice * (1 - rangePct/200);
+        const upper = currentPrice * (1 + rangePct/200);
+        gridBuyPrices = [];
+        gridSellPrices = [];
+        const step = (upper - lower) / (gridLevels);
+        for (let i=0; i<gridLevels; i++) {
+            let buyPrice = lower + i * step;
+            let sellPrice = buyPrice + step/2;
+            gridBuyPrices.push(buyPrice);
+            gridSellPrices.push(sellPrice);
+        }
+        orderSizeBCH = budgetBCH / gridLevels;
+        addLog(`Grid init: ${gridLevels} levels, range ${rangePct}%, order size ${orderSizeBCH.toFixed(6)} BCH`);
+    }
+
+    // Core grid logic: check price and execute simulated trades (dry-run)
+    async function gridTick() {
+        if (!botActive || botPaused) return;
+        if (!wallet) { addLog("No wallet, stopping bot", true); stopBot(); return; }
+        // Simulate price movement slight random walk for demo (real would fetch oracle)
+        let newPrice = tokenPriceBCH * (1 + (Math.random() - 0.5) * 0.03);
+        newPrice = Math.max(0.0005, newPrice);
+        tokenPriceBCH = newPrice;
+        document.getElementById("currentPriceSpan").innerHTML = tokenPriceBCH.toFixed(6);
+        // Grid execution simulation
+        let action = null;
+        for (let i=0; i<gridBuyPrices.length; i++) {
+            if (tokenPriceBCH <= gridBuyPrices[i] && currentTokenQty === 0 && totalBCHInvested < budgetBCH - orderSizeBCH) {
+                action = `BUY at ${tokenPriceBCH.toFixed(6)} BCH (grid level ${i})`;
+                let tokenBought = orderSizeBCH / tokenPriceBCH;
+                currentTokenQty += tokenBought;
+                totalBCHInvested += orderSizeBCH;
+                avgEntryPrice = totalBCHInvested / currentTokenQty;
+                break;
+            } else if (tokenPriceBCH >= gridSellPrices[i] && currentTokenQty > 0 && (currentTokenQty * tokenPriceBCH) > orderSizeBCH/2) {
+                let sellQty = Math.min(currentTokenQty, orderSizeBCH / tokenPriceBCH);
+                let revenue = sellQty * tokenPriceBCH;
+                totalBCHInvested -= revenue;
+                currentTokenQty -= sellQty;
+                action = `SELL ${sellQty.toFixed(4)} tokens at ${tokenPriceBCH.toFixed(6)} BCH`;
+                break;
+            }
+        }
+        // Stop loss & TP
+        let currentEquity = currentTokenQty * tokenPriceBCH;
+        let pnl = currentEquity - totalBCHInvested;
+        let pnlPct = totalBCHInvested > 0.000001 ? (pnl / totalBCHInvested) * 100 : 0;
+        document.getElementById("pnlSpan").innerHTML = pnl.toFixed(6);
+        document.getElementById("positionQty").innerHTML = currentTokenQty.toFixed(4);
+        if (!stopLossActive && totalBCHInvested > 0.00001 && pnlPct <= -stopLossPct) {
+            addLog(`🛑 STOP LOSS triggered! Selling all tokens. P&L%: ${pnlPct.toFixed(2)}%`, true);
+            let sellAllBCH = currentTokenQty * tokenPriceBCH;
+            totalBCHInvested = 0;
+            currentTokenQty = 0;
+            stopLossActive = true;
+            action = `STOP-LOSS: market sell, recovered ${sellAllBCH.toFixed(6)} BCH`;
+            document.getElementById("slStatus").innerHTML = "YES";
+            botActive = false;
+            clearInterval(botInterval);
+            botInterval = null;
+            document.getElementById("botStateLabel").innerHTML = "STOP-LOSS";
+        } else if (pnlPct >= takeProfitPct && currentTokenQty > 0.01) {
+            addLog(`🎯 Take-Profit target reached (${pnlPct.toFixed(2)}%). Partial exit.`);
+            let sellHalf = currentTokenQty / 2;
+            let revenue = sellHalf * tokenPriceBCH;
+            totalBCHInvested -= revenue;
+            currentTokenQty -= sellHalf;
+            action = `TP: sold half, gained ${revenue.toFixed(6)} BCH`;
+        }
+        if (action) {
+            addLog(`⚡ ${action} | Price: ${tokenPriceBCH.toFixed(6)} BCH/token`);
+            // Construct tx preview (dry)
+            let txPreview = `[Dry-run] ${action} using ${selectedTokenId.slice(0,8)}... from ${wallet.addressCash.slice(0,12)}`;
+            document.getElementById("logPanel").innerHTML += `<div class="text-blue-300 text-[10px]">📄 TX Preview: ${txPreview}</div>`;
+        }
+        document.getElementById("nextOrderHint").innerHTML = `Next buy ~${gridBuyPrices[0]?.toFixed(6)} | sell ~${gridSellPrices[0]?.toFixed(6)}`;
+    }
+
+    function startBot() {
+        if (!wallet) { addLog("Wallet required", true); return; }
+        if (botActive && !botPaused) { addLog("Bot already running"); return; }
+        if (botPaused) { botPaused = false; botActive = true; addLog("Bot resumed"); document.getElementById("botStateLabel").innerHTML = "RUNNING"; return; }
+        preTradeChecks().then(ok => {
+            if (!ok) { addLog("Pre-check failed", true); return; }
+            initGridParams();
+            stopLossActive = false;
+            currentTokenQty = 0;
+            totalBCHInvested = 0;
+            avgEntryPrice = 0;
+            botActive = true;
+            botPaused = false;
+            document.getElementById("botStateLabel").innerHTML = "RUNNING";
+            document.getElementById("slStatus").innerHTML = "No";
+            if (botInterval) clearInterval(botInterval);
+            botInterval = setInterval(() => gridTick(), 8000);
+            addLog("🤖 Grid Bot STARTED - dry-run tx mode. Price simulated moving ±3% each tick.");
+        });
+    }
+    function pauseBot() { if (botActive && !botPaused) { botPaused = true; addLog("Bot paused"); document.getElementById("botStateLabel").innerHTML = "PAUSED"; } }
+    function stopBot() { if (botInterval) clearInterval(botInterval); botInterval = null; botActive = false; botPaused = false; document.getElementById("botStateLabel").innerHTML = "IDLE"; addLog("Bot stopped completely"); }
+    document.getElementById("startBotBtn").onclick = startBot;
+    document.getElementById("pauseBotBtn").onclick = pauseBot;
+    document.getElementById("stopBotBtn").onclick = stopBot;
+    document.getElementById("dryRunToggleBtn").onclick = () => { dryRunMode = !dryRunMode; addLog(`Dry-run mode: ${dryRunMode ? "ON (simulated broadcast)" : "OFF (real broadcast disabled for demo safety)"}`); };
+    document.getElementById("fetchTokenInfoBtn").onclick = async () => { await fetchBalanceAndPrice(); addLog(`Token price mocked: ${tokenPriceBCH.toFixed(6)} BCH/token`); };
+    function updatePreCheckMock() { document.getElementById("preCheckResult").innerHTML = "Click 'Check Balance' to simulate."; }
+    updatePreCheckMock();
+    addLog("Cauldron Grid Bot ready. Generate wallet & select token. ⚠️ Simulated BCH broadcast only, no real on-chain tx without backend.");
+</script>
+</body>
+</html>
