@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cauldron Grid Bot • BCH CashToken Wallet • Libauth</title>
+<title>Cauldron Grid Bot • BCH CashToken Wallet • Libauth Fixed</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
-<!-- Libauth - official BCH toolkit for CashToken-compatible addresses -->
-<script src="https://cdn.jsdelivr.net/npm/@bitauth/libauth@2.0.0/dist/web/libauth.js"></script>
+<!-- Correct Libauth CDN -->
+<script src="https://unpkg.com/@bitauth/libauth@1.19.1/dist/web/libauth.js"></script>
 
-<!-- BIP39 for mnemonic generation/validation fallback -->
-<script src="https://cdn.jsdelivr.net/npm/bip39@3.0.4/browser/bip39.min.js"></script>
+<!-- BIP39 for mnemonic generation -->
+<script src="https://cdn.jsdelivr.net/npm/bip39@3.1.0/dist/bip39.min.js"></script>
 
 <style>
 body{
@@ -92,18 +92,6 @@ body{
     background:#29523b;
     border-radius:10px;
 }
-.wallet-badge{
-    background:rgba(46,204,113,0.12);
-    border-radius:40px;
-    padding:4px 12px;
-    font-size:11px;
-}
-.libauth-badge{
-    font-size:10px;
-    background:#1a2a1f;
-    border-radius:16px;
-    padding:2px 8px;
-}
 </style>
 </head>
 <body class="p-4 md:p-6">
@@ -116,21 +104,21 @@ body{
                 ⚗️ Cauldron Grid Bot
             </h1>
             <div class="text-sm text-gray-400 mt-1">
-                BCH Mainnet • CashTokens • Libauth BIP44 Wallet Engine
+                BCH Mainnet • CashTokens • Libauth BIP44 Wallet
             </div>
         </div>
-        <div class="text-xs bg-black/30 px-3 py-2 rounded-lg text-amber-300 flex items-center gap-2">
-            🔐 Libauth P2PKH | CashToken-Ready
+        <div class="text-xs bg-black/30 px-3 py-2 rounded-lg text-amber-300">
+            🛡️ Libauth P2PKH | CashToken Compatible
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- LEFT PANEL: WALLET + TOKENS (Libauth powered) -->
+        <!-- LEFT PANEL: WALLET -->
         <div class="space-y-5">
 
             <div class="glass rounded-2xl p-5 shadow-xl">
-                <h2 class="text-xl font-semibold flex items-center gap-2">👛 CashToken Wallet <span class="libauth-badge">Libauth</span></h2>
+                <h2 class="text-xl font-semibold">👛 CashToken Wallet</h2>
                 <div class="flex flex-wrap gap-2 mt-4">
                     <button id="genWalletBtn" class="btn bg-green-800 hover:bg-green-700 px-4 py-2 rounded-lg text-sm">✨ Generate</button>
                     <button id="importWalletBtn" class="btn bg-stone-800 hover:bg-stone-700 px-4 py-2 rounded-lg text-sm">🔑 Import</button>
@@ -138,24 +126,24 @@ body{
                 </div>
 
                 <div class="mt-4 space-y-3">
-                    <div class="flex justify-between items-center"><span class="text-gray-400 text-sm">Status:</span> <span id="walletStatus" class="text-yellow-300 text-sm font-mono">—</span></div>
+                    <div><span class="text-gray-400 text-sm">Status:</span> <span id="walletStatus" class="text-yellow-300 text-sm">No wallet</span></div>
                     <div id="seedBox" class="seed-box hidden"></div>
                     <div class="text-sm text-gray-400">BCH CashAddress (P2PKH)</div>
-                    <div id="cashAddress" class="address-box text-green-300 text-xs break-all">—</div>
+                    <div id="cashAddress" class="address-box text-green-300">—</div>
                     <div class="grid grid-cols-2 gap-2">
                         <button id="copyBtn" class="btn bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs">📋 Copy</button>
                         <button id="showSeedBtn" class="btn bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs">👁 Show Seed</button>
                     </div>
-                    <div id="qrBox" class="flex justify-center"></div>
-                    <div class="text-[11px] text-amber-400 bg-black/20 rounded-md p-2">🔒 BIP44 path: m/44'/145'/0'/0/0 • Libauth derivation • CashToken compatible</div>
+                    <div id="qrBox"></div>
+                    <div class="text-[11px] text-amber-400">🔒 BIP44 path: m/44'/145'/0'/0/0 • Libauth derived</div>
                 </div>
             </div>
 
             <div class="glass rounded-2xl p-5">
-                <h3 class="font-semibold mb-3">📦 CashToken Selection</h3>
+                <h3 class="font-semibold mb-3">📦 Token Selection</h3>
                 <div id="tokenList" class="flex flex-wrap gap-2 mb-4"></div>
-                <input id="customToken" class="w-full bg-black/50 border border-gray-700 rounded-lg p-2 text-sm font-mono" placeholder="Token symbol or category ID" value="PUSD" />
-                <div class="text-xs mt-2 text-gray-400">Selected: <span id="selectedToken" class="text-green-300 font-bold">PUSD</span></div>
+                <input id="customToken" class="w-full bg-black/50 border border-gray-700 rounded-lg p-2 text-sm font-mono" placeholder="Token symbol" value="PUSD" />
+                <div class="text-xs mt-2 text-gray-400">Selected: <span id="selectedToken" class="text-green-300">PUSD</span></div>
             </div>
         </div>
 
@@ -165,14 +153,14 @@ body{
                 <h2 class="text-xl font-semibold">⚙️ Grid Settings</h2>
                 <div class="grid grid-cols-2 gap-4 mt-4">
                     <div><label class="text-xs text-gray-400">Budget USD</label><input id="budgetUsd" type="number" value="20" class="w-full bg-black/50 rounded-lg p-2 border border-gray-700"></div>
-                    <div><label class="text-xs text-gray-400">BCH/USD Price</label><input id="bchUsd" type="number" value="380" class="w-full bg-black/50 rounded-lg p-2 border border-gray-700"></div>
+                    <div><label class="text-xs text-gray-400">BCH/USD</label><input id="bchUsd" type="number" value="380" class="w-full bg-black/50 rounded-lg p-2 border border-gray-700"></div>
                     <div><label class="text-xs text-gray-400">Grid Levels</label><input id="gridLevels" type="number" value="5" class="w-full bg-black/50 rounded-lg p-2 border border-gray-700"></div>
                     <div><label class="text-xs text-gray-400">Range %</label><input id="rangePct" type="number" value="20" class="w-full bg-black/50 rounded-lg p-2 border border-gray-700"></div>
                     <div><label class="text-xs text-gray-400">Stop Loss %</label><input id="stopLoss" type="number" value="15" class="w-full bg-black/50 rounded-lg p-2 border border-gray-700"></div>
                     <div><label class="text-xs text-gray-400">Take Profit %</label><input id="takeProfit" type="number" value="30" class="w-full bg-black/50 rounded-lg p-2 border border-gray-700"></div>
                 </div>
                 <button id="precheckBtn" class="w-full mt-4 bg-blue-900 hover:bg-blue-800 py-2 rounded-lg">💡 Balance Check</button>
-                <div id="precheckResult" class="mt-3 text-xs bg-black/40 rounded-lg p-3 max-h-32 overflow-y-auto font-mono"></div>
+                <div id="precheckResult" class="mt-3 text-xs bg-black/40 rounded-lg p-3 max-h-32 overflow-y-auto"></div>
             </div>
 
             <div class="glass rounded-2xl p-5">
@@ -183,18 +171,18 @@ body{
                 </div>
                 <div class="bg-black/35 rounded-xl p-4 mt-4 text-sm space-y-2">
                     <div class="flex justify-between"><span>Bot State</span><span id="botState" class="text-green-300 font-bold">IDLE</span></div>
-                    <div class="flex justify-between"><span>Token Price (BCH)</span><span id="priceLabel" class="font-mono">—</span></div>
-                    <div class="flex justify-between"><span>Position Qty</span><span id="positionLabel" class="font-mono">0</span></div>
-                    <div class="flex justify-between"><span>P&L (BCH)</span><span id="pnlLabel" class="font-mono">0</span></div>
-                    <div class="flex justify-between"><span>Invested BCH</span><span id="investedLabel" class="font-mono">0</span></div>
+                    <div class="flex justify-between"><span>Token Price (BCH)</span><span id="priceLabel">—</span></div>
+                    <div class="flex justify-between"><span>Position Qty</span><span id="positionLabel">0</span></div>
+                    <div class="flex justify-between"><span>P&L (BCH)</span><span id="pnlLabel">0</span></div>
+                    <div class="flex justify-between"><span>Invested BCH</span><span id="investedLabel">0</span></div>
                 </div>
-                <div class="mt-3 text-xs flex items-center gap-2"><span class="status-dot"></span> Libauth-generated wallet • Grid simulation with SL/TP</div>
+                <div class="mt-3 text-xs"><span class="status-dot"></span> Grid simulation • Libauth wallet • SL/TP active</div>
             </div>
         </div>
 
-        <!-- RIGHT PANEL: LOGS (working properly) -->
+        <!-- RIGHT PANEL: LOGS -->
         <div class="glass rounded-2xl p-5">
-            <div class="flex justify-between items-center"><h3 class="font-mono text-sm">📜 Event Log <span id="logCountBadge" class="text-[10px] bg-gray-700 px-1 rounded">0</span></h3><button id="clearLogsBtn" class="text-xs bg-black/30 hover:bg-black/50 px-2 py-1 rounded">Clear</button></div>
+            <div class="flex justify-between items-center"><h3 class="font-mono text-sm">📜 Event Log</h3><button id="clearLogsBtn" class="text-xs bg-black/30 hover:bg-black/50 px-2 py-1 rounded">Clear</button></div>
             <div id="logPanel" class="mt-3 bg-black/40 rounded-lg p-3 h-[560px] overflow-y-auto"></div>
         </div>
     </div>
@@ -202,30 +190,40 @@ body{
 
 <script>
 // ===============================================
-// FIXED WALLET GENERATION USING LIBAUTH (Official BCH toolkit)
-// Full BIP44 derivation: m/44'/145'/0'/0/0
+// FIXED: LIBAUTH WALLET GENERATION WITH PROPER CDN
+// BIP44 derivation: m/44'/145'/0'/0/0
 // CashToken-compatible P2PKH addresses
-// Enhanced logging with timestamps & integrity
 // ===============================================
 
-const libauth = window.libauth || window.Libauth;
-if (!libauth) console.error("Libauth not loaded");
+// Wait for Libauth to load
+let libauth = null;
+let bip39Lib = null;
 
-// Destructure required functions from libauth
-const {
-    mnemonicToSeed,
-    deriveHdPrivateKey,
-    deriveHdPath,
-    derivePublicKeyFromPrivateKey,
-    secp256k1,
-    cashAddressToLockingBytecode,
-    lockingBytecodeToCashAddress
-} = libauth;
+// Poll for libauth availability
+function waitForLibauth() {
+    return new Promise((resolve) => {
+        if (window.libauth || window.Libauth) {
+            resolve(window.libauth || window.Libauth);
+            return;
+        }
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            if (window.libauth || window.Libauth) {
+                clearInterval(interval);
+                resolve(window.libauth || window.Libauth);
+            } else if (attempts > 50) {
+                clearInterval(interval);
+                resolve(null);
+            }
+        }, 100);
+    });
+}
 
-const STORAGE_KEY = "cauldron_libauth_wallet_v2";
-const ENCRYPTION_KEY_NAME = "cauldron_enc_masterkey";
+const STORAGE_KEY = "cauldron_libauth_wallet";
+const ENCRYPTION_KEY_NAME = "cauldron_enc_key";
 
-let wallet = null;          // { mnemonic, cashAddress, fingerprint, publicKeyHex, wif? }
+let wallet = null;
 let selectedTokenId = "PUSD";
 let tokenPriceBCH = 0.0025;
 let currentTokenQty = 0;
@@ -238,30 +236,26 @@ let botPaused = false;
 let botInterval = null;
 let stopLossTrigger = false;
 let takeProfitTrigger = false;
-let logCounter = 0;
 
 const topTokens = ["PUSD", "EMBER", "FLEX", "FURU", "MIST", "BCHBULL"];
 
-// =============== ENHANCED LOGGING (fully functional) ===============
-function addLogMessage(msg, isError = false) {
+// =============== LOGGING ===============
+function log(msg, isError = false) {
     const panel = document.getElementById("logPanel");
-    const logDiv = document.createElement("div");
-    logDiv.className = `log-line ${isError ? "text-red-300 border-red-800/30" : "text-emerald-200/90"}`;
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' });
-    logDiv.textContent = `[${timeStr}] ${msg}`;
-    panel.appendChild(logDiv);
-    logCounter++;
-    const badge = document.getElementById("logCountBadge");
-    if (badge) badge.innerText = logCounter;
+    const div = document.createElement("div");
+    div.className = `log-line ${isError ? "text-red-400" : "text-green-200"}`;
+    div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    panel.appendChild(div);
     panel.scrollTop = panel.scrollHeight;
-    while (panel.children.length > 400) panel.removeChild(panel.firstChild);
-    console.log(`[LOG] ${msg}`);
+    if (panel.children.length > 300) panel.removeChild(panel.firstChild);
+    console.log(msg);
 }
 
-function log(msg, isError = false) { addLogMessage(msg, isError); }
+function shortAddr(addr) {
+    return addr ? addr.slice(0, 14) + "..." + addr.slice(-10) : "";
+}
 
-// =============== AES-GCM ENCRYPTION (secure seed storage) ===============
+// =============== AES-GCM ENCRYPTION ===============
 async function getEncryptionKey() {
     let keyMaterial = localStorage.getItem(ENCRYPTION_KEY_NAME);
     if (!keyMaterial) {
@@ -271,16 +265,15 @@ async function getEncryptionKey() {
         const exported = await window.crypto.subtle.exportKey("jwk", newKey);
         keyMaterial = JSON.stringify(exported);
         localStorage.setItem(ENCRYPTION_KEY_NAME, keyMaterial);
-        log("🔐 Generated AES-GCM master key");
     }
     const jwk = JSON.parse(keyMaterial);
     return window.crypto.subtle.importKey("jwk", jwk, "AES-GCM", false, ["encrypt", "decrypt"]);
 }
 
-async function encryptData(obj) {
+async function encrypt(data) {
     const key = await getEncryptionKey();
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
-    const encoded = new TextEncoder().encode(JSON.stringify(obj));
+    const encoded = new TextEncoder().encode(JSON.stringify(data));
     const encrypted = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
     const combined = new Uint8Array(iv.length + encrypted.byteLength);
     combined.set(iv, 0);
@@ -288,7 +281,7 @@ async function encryptData(obj) {
     return btoa(String.fromCharCode(...combined));
 }
 
-async function decryptData(encryptedB64) {
+async function decrypt(encryptedB64) {
     try {
         const key = await getEncryptionKey();
         const combined = Uint8Array.from(atob(encryptedB64), c => c.charCodeAt(0));
@@ -297,120 +290,122 @@ async function decryptData(encryptedB64) {
         const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
         return JSON.parse(new TextDecoder().decode(decrypted));
     } catch(e) {
-        console.error("Decryption failed", e);
         return null;
     }
 }
 
-// =============== LIBAUTH CASHTOKEN WALLET GENERATION ===============
-// Follows official example: mnemonic -> seed -> HD private key -> derive path -> public key -> CashAddress (P2PKH)
+// =============== LIBAUTH WALLET GENERATION (exactly like example) ===============
 async function generateLibauthWallet(existingMnemonic = null) {
-    try {
-        let mnemonic = existingMnemonic;
-        if (!mnemonic) {
-            // Generate 24-word mnemonic using bip39 (compatible with libauth)
-            mnemonic = bip39.generateMnemonic(256);
-        }
-        if (!bip39.validateMnemonic(mnemonic)) {
-            throw new Error("Invalid BIP39 mnemonic");
-        }
-        const password = "";
-        // 1. Convert mnemonic to seed (using libauth)
-        const seed = await mnemonicToSeed(mnemonic, password);
-        
-        // 2. Derive HD private key from seed
-        const masterNode = await deriveHdPrivateKey({ seed });
-        
-        // 3. BIP44 derivation path for BCH CashTokens: m/44'/145'/0'/0/0
-        const derivationPath = "m/44'/145'/0'/0/0";
-        const hdPathResult = await deriveHdPath(masterNode, derivationPath);
-        
-        if (typeof hdPathResult === 'string') {
-            throw new Error(`Derivation error: ${hdPathResult}`);
-        }
-        
-        // 4. Derive public key from private key
-        const publicKey = derivePublicKeyFromPrivateKey(secp256k1, hdPathResult.privateKey);
-        
-        // 5. Generate CashToken compatible P2PKH locking bytecode and address
-        const lockingBytecodeObj = cashAddressToLockingBytecode({
-            type: 'p2pkh',
-            payload: publicKey
-        });
-        
-        const cashAddress = lockingBytecodeToCashAddress({
-            lockingBytecode: lockingBytecodeObj.bytecode,
-            prefix: 'bitcoincash'
-        });
-        
-        // Compute fingerprint (first 8 bytes of public key hash)
-        const publicKeyHex = Array.from(publicKey).map(b => b.toString(16).padStart(2,'0')).join('');
-        // Simple fingerprint using SHA256 then slice
-        const encoder = new TextEncoder();
-        const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array(publicKey));
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const fingerprint = hashArray.slice(0, 4).map(b => b.toString(16).padStart(2,'0')).join('');
-        
-        const wif = "not_exported_for_web"; // For security, we don't expose WIF in UI
-        
-        log(`✅ Libauth wallet derived: ${cashAddress.substring(0, 16)}...`, false);
-        
-        return {
-            mnemonic,
-            cashAddress,
-            fingerprint,
-            publicKeyHex: publicKeyHex.substring(0, 64),
-            path: derivationPath,
-            created: Date.now(),
-            version: "libauth_v1"
-        };
-    } catch (err) {
-        throw new Error(`Libauth wallet generation error: ${err.message}`);
+    if (!libauth) throw new Error("Libauth not loaded yet");
+    if (!bip39Lib) throw new Error("BIP39 not loaded");
+    
+    const {
+        mnemonicToSeed,
+        deriveHdPrivateKey,
+        deriveHdPath,
+        derivePublicKeyFromPrivateKey,
+        secp256k1,
+        cashAddressToLockingBytecode,
+        lockingBytecodeToCashAddress
+    } = libauth;
+    
+    // Use provided mnemonic or generate new one
+    let mnemonic = existingMnemonic;
+    if (!mnemonic) {
+        mnemonic = bip39Lib.generateMnemonic(256);
     }
+    
+    if (!bip39Lib.validateMnemonic(mnemonic)) {
+        throw new Error("Invalid mnemonic phrase");
+    }
+    
+    const password = "";
+    
+    // 1. Convert to seed
+    const seed = await mnemonicToSeed(mnemonic, password);
+    
+    // 2. Derive HD private key
+    const masterNode = await deriveHdPrivateKey({ seed });
+    
+    // 3. Derive BIP44 path for BCH: m/44'/145'/0'/0/0
+    const derivationPath = "m/44'/145'/0'/0/0";
+    const hdPathResult = await deriveHdPath(masterNode, derivationPath);
+    
+    if (typeof hdPathResult === 'string') {
+        throw new Error(`Derivation error: ${hdPathResult}`);
+    }
+    
+    // 4. Derive Public Key
+    const publicKey = derivePublicKeyFromPrivateKey(secp256k1, hdPathResult.privateKey);
+    
+    // 5. Generate CashToken compatible P2PKH Address
+    const lockingBytecodeResult = cashAddressToLockingBytecode({
+        type: 'p2pkh',
+        payload: publicKey
+    });
+    
+    const address = lockingBytecodeToCashAddress({
+        lockingBytecode: lockingBytecodeResult.bytecode,
+        prefix: 'bitcoincash'
+    });
+    
+    // Generate fingerprint from public key
+    const pubKeyArray = Array.from(publicKey);
+    const fingerprint = pubKeyArray.slice(0, 4).map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    return {
+        mnemonic,
+        cashAddress: address,
+        fingerprint,
+        path: derivationPath,
+        created: Date.now()
+    };
 }
 
-async function saveWalletToStorage(walletData) {
+async function saveWallet(walletData) {
     try {
-        const encrypted = await encryptData({
+        const encrypted = await encrypt({
             mnemonic: walletData.mnemonic,
             fingerprint: walletData.fingerprint,
-            path: walletData.path
+            cashAddress: walletData.cashAddress
         });
-        const stored = {
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
             encryptedData: encrypted,
             cashAddress: walletData.cashAddress,
             fingerprint: walletData.fingerprint,
-            created: walletData.created,
-            version: walletData.version
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+            created: walletData.created
+        }));
+        
         wallet = walletData;
         updateWalletUI();
-        log(`💾 Wallet saved (AES-GCM) | ${shortAddr(wallet.cashAddress)}`);
-    } catch(e) {
-        log(`Save failed: ${e.message}`, true);
+        log(`✅ Wallet saved securely | ${shortAddr(wallet.cashAddress)}`);
+    } catch(err) {
+        log(`Save failed: ${err.message}`, true);
     }
 }
 
-async function loadWalletFromStorage() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+async function loadWallet() {
+    const savedRaw = localStorage.getItem(STORAGE_KEY);
+    if (!savedRaw) return;
+    
     try {
-        const stored = JSON.parse(raw);
-        const decrypted = await decryptData(stored.encryptedData);
-        if (!decrypted || !decrypted.mnemonic) throw new Error("Invalid encrypted data");
-        const restored = await generateLibauthWallet(decrypted.mnemonic);
-        if (restored.cashAddress !== stored.cashAddress || restored.fingerprint !== stored.fingerprint) {
-            throw new Error("Integrity mismatch - wallet corrupted");
+        const stored = JSON.parse(savedRaw);
+        const decrypted = await decrypt(stored.encryptedData);
+        if (!decrypted?.mnemonic) throw new Error("Decryption failed");
+        
+        const regenerated = await generateLibauthWallet(decrypted.mnemonic);
+        
+        if (regenerated.cashAddress !== stored.cashAddress) {
+            throw new Error("Integrity check failed");
         }
-        wallet = restored;
+        
+        wallet = regenerated;
         updateWalletUI();
-        log("🔓 Wallet restored from secure storage (Libauth)");
-        return wallet;
+        log("🔐 Wallet restored successfully");
     } catch(err) {
-        log(`Restore error: ${err.message}`, true);
+        log(`Restore failed: ${err.message}`, true);
         localStorage.removeItem(STORAGE_KEY);
-        return null;
     }
 }
 
@@ -418,16 +413,19 @@ function updateWalletUI() {
     const statusSpan = document.getElementById("walletStatus");
     const addrSpan = document.getElementById("cashAddress");
     const qrDiv = document.getElementById("qrBox");
-    if (qrDiv) qrDiv.innerHTML = "";
+    qrDiv.innerHTML = "";
+    
     if (!wallet) {
-        statusSpan.innerHTML = "⚠️ No wallet";
+        statusSpan.textContent = "No wallet";
         statusSpan.className = "text-red-300 text-sm";
         addrSpan.textContent = "—";
         return;
     }
-    statusSpan.innerHTML = `✅ Libauth CashToken Ready`;
+    
+    statusSpan.textContent = "✅ BCH Mainnet (Libauth)";
     statusSpan.className = "text-green-300 text-sm";
     addrSpan.textContent = wallet.cashAddress;
+    
     try {
         new QRCode(qrDiv, {
             text: wallet.cashAddress,
@@ -439,27 +437,25 @@ function updateWalletUI() {
     } catch(e) {}
 }
 
-function shortAddr(addr) { return addr ? addr.slice(0, 12) + "…" + addr.slice(-8) : ""; }
-
-// =============== TOKEN UI & GRID ENGINE ===============
+// =============== TOKEN UI ===============
 function renderTokens() {
     const container = document.getElementById("tokenList");
-    if (!container) return;
     container.innerHTML = "";
-    topTokens.forEach(tok => {
-        const chip = document.createElement("div");
-        chip.className = "token-pill text-xs";
-        chip.textContent = tok;
-        chip.onclick = () => {
-            selectedTokenId = tok;
-            document.getElementById("selectedToken").innerText = tok;
-            document.getElementById("customToken").value = tok;
-            log(`📌 Selected CashToken: ${tok}`);
+    topTokens.forEach(token => {
+        const div = document.createElement("div");
+        div.className = "token-pill text-xs";
+        div.textContent = token;
+        div.onclick = () => {
+            selectedTokenId = token;
+            document.getElementById("selectedToken").textContent = token;
+            document.getElementById("customToken").value = token;
+            log(`Selected token: ${token}`);
         };
-        container.appendChild(chip);
+        container.appendChild(div);
     });
 }
 
+// =============== GRID ENGINE ===============
 function initGrid() {
     const levels = parseInt(document.getElementById("gridLevels").value) || 5;
     const rangePct = parseFloat(document.getElementById("rangePct").value) || 20;
@@ -467,13 +463,22 @@ function initGrid() {
     const lower = currentPrice * (1 - rangePct / 200);
     const upper = currentPrice * (1 + rangePct / 200);
     const step = (upper - lower) / levels;
+    
     gridBuyPrices = [];
     gridSellPrices = [];
     for (let i = 0; i < levels; i++) {
         gridBuyPrices.push(lower + (i * step));
         gridSellPrices.push(lower + ((i + 0.5) * step));
     }
-    log(`📊 Grid initialized: ${levels} levels, spread ${(rangePct/2).toFixed(1)}%`);
+    log(`📐 Grid: ${levels} levels, ±${(rangePct/2).toFixed(1)}%`);
+}
+
+function updatePnlUI() {
+    const equity = currentTokenQty * tokenPriceBCH;
+    const pnl = equity - totalBCHInvested;
+    document.getElementById("pnlLabel").textContent = pnl.toFixed(8) + " BCH";
+    document.getElementById("positionLabel").textContent = currentTokenQty.toFixed(8);
+    document.getElementById("investedLabel").textContent = totalBCHInvested.toFixed(8) + " BCH";
 }
 
 async function precheck() {
@@ -481,48 +486,42 @@ async function precheck() {
     const usd = parseFloat(document.getElementById("budgetUsd").value);
     const bchUsd = parseFloat(document.getElementById("bchUsd").value);
     if (isNaN(usd) || isNaN(bchUsd) || bchUsd <= 0) {
-        log("Invalid USD/BCH values", true);
+        log("Invalid fiat values", true);
         return false;
     }
     budgetBCH = usd / bchUsd;
-    document.getElementById("precheckResult").innerHTML = `✅ Budget: ${budgetBCH.toFixed(8)} BCH (~$${usd})<br>📍 Wallet: ${shortAddr(wallet.cashAddress)}`;
-    log(`💰 Precheck passed | Budget: ${budgetBCH.toFixed(6)} BCH`);
+    document.getElementById("precheckResult").innerHTML = `✅ Budget: ${budgetBCH.toFixed(8)} BCH (~$${usd})<br>📍 ${shortAddr(wallet.cashAddress)}`;
+    log(`💰 Budget: ${budgetBCH.toFixed(6)} BCH`);
     return true;
-}
-
-function updatePnlUI() {
-    const equity = currentTokenQty * tokenPriceBCH;
-    const pnl = equity - totalBCHInvested;
-    document.getElementById("pnlLabel").innerHTML = pnl.toFixed(8) + " BCH";
-    document.getElementById("positionLabel").innerHTML = currentTokenQty.toFixed(8);
-    document.getElementById("investedLabel").innerHTML = totalBCHInvested.toFixed(8) + " BCH";
-    return pnl;
 }
 
 async function gridTick() {
     if (!botActive || botPaused) return;
-    // Simulated price movement
-    const volatility = 0.028;
+    
+    // Price simulation
+    const volatility = 0.025;
     tokenPriceBCH = Math.max(tokenPriceBCH * (1 + (Math.random() - 0.5) * volatility), 0.00001);
-    document.getElementById("priceLabel").innerHTML = tokenPriceBCH.toFixed(8) + " BCH";
+    document.getElementById("priceLabel").textContent = tokenPriceBCH.toFixed(8) + " BCH";
     
     const stopLossPct = parseFloat(document.getElementById("stopLoss").value) || 15;
     const takeProfitPct = parseFloat(document.getElementById("takeProfit").value) || 30;
     
+    // Stop Loss & Take Profit
     if (currentTokenQty > 0 && totalBCHInvested > 0) {
         const avgEntry = totalBCHInvested / currentTokenQty;
-        const ret = (tokenPriceBCH - avgEntry) / avgEntry * 100;
-        if (!stopLossTrigger && ret <= -stopLossPct) {
+        const currentReturn = (tokenPriceBCH - avgEntry) / avgEntry * 100;
+        
+        if (!stopLossTrigger && currentReturn <= -stopLossPct) {
             stopLossTrigger = true;
-            log(`🛑 STOP LOSS @ ${ret.toFixed(2)}% → closing position`, false);
+            log(`🛑 STOP LOSS @ ${currentReturn.toFixed(2)}%`, false);
             currentTokenQty = 0;
             totalBCHInvested = 0;
             updatePnlUI();
             return;
         }
-        if (!takeProfitTrigger && ret >= takeProfitPct) {
+        if (!takeProfitTrigger && currentReturn >= takeProfitPct) {
             takeProfitTrigger = true;
-            log(`🎯 TAKE PROFIT @ ${ret.toFixed(2)}% → securing gains`, false);
+            log(`🎯 TAKE PROFIT @ ${currentReturn.toFixed(2)}%`, false);
             currentTokenQty = 0;
             totalBCHInvested = 0;
             updatePnlUI();
@@ -532,151 +531,177 @@ async function gridTick() {
     
     if (gridBuyPrices.length === 0) initGrid();
     const orderSizeBCH = budgetBCH / (gridBuyPrices.length || 1);
-    let actionDone = false;
+    let executed = false;
     
     // BUY
-    for (let i = 0; i < gridBuyPrices.length && !actionDone; i++) {
+    for (let i = 0; i < gridBuyPrices.length && !executed; i++) {
         if (tokenPriceBCH <= gridBuyPrices[i] && totalBCHInvested < budgetBCH) {
             const available = budgetBCH - totalBCHInvested;
-            const maxQty = available / tokenPriceBCH;
-            const buyQty = Math.min(orderSizeBCH / tokenPriceBCH, maxQty);
+            const buyQty = Math.min(orderSizeBCH / tokenPriceBCH, available / tokenPriceBCH);
             if (buyQty > 1e-8) {
                 currentTokenQty += buyQty;
                 totalBCHInvested += buyQty * tokenPriceBCH;
-                log(`🟢 BUY ${buyQty.toFixed(6)} @ ${tokenPriceBCH.toFixed(8)} BCH`, false);
-                actionDone = true;
+                log(`🟢 BUY ${buyQty.toFixed(6)} @ ${tokenPriceBCH.toFixed(8)}`, false);
+                executed = true;
                 updatePnlUI();
                 break;
             }
         }
     }
+    
     // SELL
-    if (!actionDone) {
-        for (let i = 0; i < gridSellPrices.length && !actionDone; i++) {
+    if (!executed) {
+        for (let i = 0; i < gridSellPrices.length && !executed; i++) {
             if (tokenPriceBCH >= gridSellPrices[i] && currentTokenQty > 0) {
                 const sellQty = Math.min(currentTokenQty, orderSizeBCH / tokenPriceBCH);
                 if (sellQty > 1e-8) {
                     currentTokenQty -= sellQty;
-                    const sellVal = sellQty * tokenPriceBCH;
-                    totalBCHInvested -= sellVal;
+                    totalBCHInvested -= sellQty * tokenPriceBCH;
                     if (totalBCHInvested < 0) totalBCHInvested = 0;
-                    log(`🔴 SELL ${sellQty.toFixed(6)} @ ${tokenPriceBCH.toFixed(8)} BCH`, false);
-                    actionDone = true;
+                    log(`🔴 SELL ${sellQty.toFixed(6)} @ ${tokenPriceBCH.toFixed(8)}`, false);
+                    executed = true;
                     updatePnlUI();
                     break;
                 }
             }
         }
     }
+    
     if (currentTokenQty === 0) {
         stopLossTrigger = false;
         takeProfitTrigger = false;
     }
 }
 
-function startBot() {
-    if (!wallet) { log("❌ Generate/import wallet first", true); return; }
-    precheck().then(ok => {
-        if (!ok) return;
-        if (botActive) stopBot();
-        currentTokenQty = 0;
-        totalBCHInvested = 0;
-        stopLossTrigger = false;
-        takeProfitTrigger = false;
-        tokenPriceBCH = 0.0025;
-        document.getElementById("priceLabel").innerHTML = tokenPriceBCH.toFixed(8);
-        initGrid();
-        botActive = true;
-        botPaused = false;
-        document.getElementById("botState").innerHTML = "RUNNING";
-        if (botInterval) clearInterval(botInterval);
-        botInterval = setInterval(gridTick, 4500);
-        log(`🚀 Bot started | Wallet: ${shortAddr(wallet.cashAddress)} | Budget: ${budgetBCH.toFixed(6)} BCH`);
-    });
-}
-
 function stopBot() {
     if (botInterval) clearInterval(botInterval);
     botActive = false;
     botPaused = false;
-    document.getElementById("botState").innerHTML = "IDLE";
+    document.getElementById("botState").textContent = "IDLE";
     log("⏹ Bot stopped");
 }
 
-function pauseBot() {
-    if (!botActive) { log("Bot not active", true); return; }
-    botPaused = !botPaused;
-    document.getElementById("botState").innerHTML = botPaused ? "PAUSED" : "RUNNING";
-    log(botPaused ? "⏸ Bot paused" : "▶ Bot resumed");
+async function startBot() {
+    if (!wallet) { log("❌ Wallet required", true); return; }
+    const ok = await precheck();
+    if (!ok) return;
+    
+    if (botActive) stopBot();
+    
+    currentTokenQty = 0;
+    totalBCHInvested = 0;
+    stopLossTrigger = false;
+    takeProfitTrigger = false;
+    tokenPriceBCH = 0.0025;
+    document.getElementById("priceLabel").textContent = tokenPriceBCH.toFixed(8);
+    initGrid();
+    
+    botActive = true;
+    botPaused = false;
+    document.getElementById("botState").textContent = "RUNNING";
+    
+    if (botInterval) clearInterval(botInterval);
+    botInterval = setInterval(gridTick, 4000);
+    log("🤖 Grid Bot STARTED (Libauth wallet)");
 }
 
-// =============== EVENT BINDINGS ===============
+function pauseBot() {
+    if (!botActive) return;
+    botPaused = !botPaused;
+    document.getElementById("botState").textContent = botPaused ? "PAUSED" : "RUNNING";
+    log(botPaused ? "⏸ Paused" : "▶ Resumed");
+}
+
+// =============== INITIALIZATION ===============
+async function init() {
+    log("⏳ Loading Libauth...");
+    libauth = await waitForLibauth();
+    
+    if (libauth) {
+        log("✅ Libauth loaded successfully");
+    } else {
+        log("❌ Failed to load Libauth", true);
+        return;
+    }
+    
+    if (window.bip39) {
+        bip39Lib = window.bip39;
+        log("✅ BIP39 loaded");
+    } else {
+        log("❌ BIP39 not loaded", true);
+        return;
+    }
+    
+    renderTokens();
+    await loadWallet();
+    log("⚗️ Cauldron Grid Bot ready | Libauth BIP44");
+}
+
+// Event Listeners
 document.getElementById("genWalletBtn").onclick = async () => {
     try {
-        log("✨ Generating Libauth BCH CashToken wallet (BIP44)...");
-        const newWallet = await generateLibauthWallet();
-        await saveWalletToStorage(newWallet);
-        const seedDiv = document.getElementById("seedBox");
-        seedDiv.innerHTML = `<span class="text-yellow-300">🔐 24-WORD SEED (Libauth)</span><br><span class="text-[11px] break-all">${newWallet.mnemonic}</span><br><span class="text-green-400">🆔 FP: ${newWallet.fingerprint}</span>`;
-        seedDiv.classList.remove("hidden");
-        log("✅ Libauth wallet created | " + shortAddr(newWallet.cashAddress));
-    } catch(e) { log("Generation error: " + e.message, true); }
+        log("✨ Generating BIP44 wallet via Libauth...");
+        const generated = await generateLibauthWallet();
+        await saveWallet(generated);
+        const seedBox = document.getElementById("seedBox");
+        seedBox.innerHTML = `<b>🔐 24-Word Seed</b><br><span class="text-xs break-all">${generated.mnemonic}</span><br><span class="text-green-400">FP: ${generated.fingerprint}</span>`;
+        seedBox.classList.remove("hidden");
+    } catch(err) { log(err.message, true); }
 };
 
 document.getElementById("importWalletBtn").onclick = async () => {
-    const mnemonicInput = prompt("Enter BIP39 mnemonic phrase (12 or 24 words):");
-    if (!mnemonicInput) return;
+    const mnemonic = prompt("Enter BIP39 mnemonic (12 or 24 words):");
+    if (!mnemonic) return;
     try {
-        const cleaned = mnemonicInput.trim().toLowerCase().replace(/\s+/g, " ");
+        const cleaned = mnemonic.trim().toLowerCase().replace(/\s+/g, " ");
         const imported = await generateLibauthWallet(cleaned);
-        await saveWalletToStorage(imported);
-        document.getElementById("seedBox").innerHTML = `<span class="text-emerald-300">✅ Imported via Libauth</span><br>${imported.mnemonic.substring(0, 60)}...`;
+        await saveWallet(imported);
+        document.getElementById("seedBox").innerHTML = `<b>✅ Imported</b><br>${imported.mnemonic.substring(0, 60)}...`;
         document.getElementById("seedBox").classList.remove("hidden");
-        log("🔑 Wallet imported | " + shortAddr(imported.cashAddress));
-    } catch(e) { log("Import error: " + e.message, true); }
+    } catch(err) { log("Import failed: " + err.message, true); }
 };
 
 document.getElementById("clearWalletBtn").onclick = () => {
-    if (confirm("Permanently delete wallet?")) {
+    if (confirm("Delete wallet permanently?")) {
         localStorage.removeItem(STORAGE_KEY);
         wallet = null;
         updateWalletUI();
         document.getElementById("seedBox").classList.add("hidden");
-        document.getElementById("cashAddress").textContent = "—";
         log("🧹 Wallet cleared");
     }
 };
+
 document.getElementById("copyBtn").onclick = () => {
-    if (wallet) { navigator.clipboard.writeText(wallet.cashAddress); log("📋 Address copied"); }
-    else log("No wallet", true);
+    if (wallet) {
+        navigator.clipboard.writeText(wallet.cashAddress);
+        log("📋 Address copied");
+    }
 };
+
 document.getElementById("showSeedBtn").onclick = () => {
-    if (!wallet) { log("No wallet", true); return; }
+    if (!wallet) return log("No wallet", true);
     const box = document.getElementById("seedBox");
     if (box.classList.contains("hidden")) {
-        box.innerHTML = `<b>🔐 Seed (Keep safe)</b><br><span class="text-amber-200 text-xs break-all">${wallet.mnemonic}</span>`;
+        box.innerHTML = `<b>🔐 Seed Phrase</b><br><span class="text-xs">${wallet.mnemonic}</span>`;
         box.classList.remove("hidden");
     } else box.classList.add("hidden");
 };
+
 document.getElementById("precheckBtn").onclick = precheck;
 document.getElementById("startBtn").onclick = startBot;
 document.getElementById("pauseBtn").onclick = pauseBot;
 document.getElementById("stopBtn").onclick = stopBot;
 document.getElementById("clearLogsBtn").onclick = () => {
     document.getElementById("logPanel").innerHTML = "";
-    logCounter = 0;
-    if(document.getElementById("logCountBadge")) document.getElementById("logCountBadge").innerText = "0";
     log("Logs cleared");
 };
 document.getElementById("customToken").addEventListener("input", (e) => {
-    selectedTokenId = e.target.value.trim() || "PUSD";
-    document.getElementById("selectedToken").innerText = selectedTokenId.slice(0, 28);
+    selectedTokenId = e.target.value || "PUSD";
+    document.getElementById("selectedToken").textContent = selectedTokenId.slice(0, 24);
 });
 
-// =============== INITIALIZATION ===============
-renderTokens();
-loadWalletFromStorage();
-log("⚗️ Cauldron Grid Bot | Libauth BIP44 wallet engine • Logging active");
+// Start the app
+init();
 </script>
 </body>
 </html>
