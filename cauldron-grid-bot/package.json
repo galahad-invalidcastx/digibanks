@@ -11,9 +11,7 @@
   },
   "dependencies": {
     "@bitauth/libauth": "^2.0.0",
-    "bip32": "^4.0.0",
     "bip39": "^3.1.0",
-    "bs58check": "^2.1.2",
     "qrcode.react": "^3.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
