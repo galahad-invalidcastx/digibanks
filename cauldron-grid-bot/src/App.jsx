@@ -17,9 +17,16 @@ function App() {
   }
 
   useEffect(() => {
-    loadWallet(setWallet, addLog)
-    addLog('⚗️ Cauldron Grid Bot - 12-Word BIP39 Version')
-    addLog('✅ Compatible with Cashonize.com and standard BCH wallets')
+    const init = async () => {
+      try {
+        await loadWallet(setWallet, addLog)
+        addLog('⚗️ Cauldron Grid Bot - 12-Word BIP39 Version')
+        addLog('✅ Compatible with Cashonize.com and standard BCH wallets')
+      } catch (error) {
+        addLog(`Initialization error: ${error.message}`, true)
+      }
+    }
+    init()
   }, [])
 
   return (

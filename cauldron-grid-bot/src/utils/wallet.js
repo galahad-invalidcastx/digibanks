@@ -7,32 +7,40 @@ const STORAGE_KEY = "cauldron_wallet_12word"
 const BCH_DERIVATION_PATH = "m/44'/145'/0'/0/0"
 
 export async function generateWallet(existingMnemonic = null) {
-  const mnemonic = existingMnemonic || bip39.generateMnemonic(128)
-  
-  if (!bip39.validateMnemonic(mnemonic)) {
-    throw new Error("Invalid BIP39 mnemonic")
-  }
-  
-  const seed = await bip39.mnemonicToSeed(mnemonic)
-  const root = bip32.fromSeed(seed)
-  const child = root.derivePath(BCH_DERIVATION_PATH)
-  const pubkey = child.publicKey
-  
-  // Convert to CashAddress using libauth
-  const ecPair = libauth.ECPair.fromPublicKey(pubkey)
-  const { cashAddress } = libauth.encodeCashAddress(
-    libauth.CashAddressNetworkPrefix.Mainnet,
-    libauth.encodeP2pkhOutput(ecPair.publicKeyHash)
-  )
-  
-  const fingerprint = child.fingerprint?.toString("hex") || "00000000"
-  
-  return {
-    mnemonic,
-    cashAddress,
-    fingerprint,
-    path: BCH_DERIVATION_PATH,
-    created: Date.now()
+  try {
+    const mnemonic = existingMnemonic || bip39.generateMnemonic(128)
+    
+    if (!bip39.validateMnemonic(mnemonic)) {
+      throw new Error("Invalid BIP39 mnemonic")
+    }
+    
+    const seed = await bip39.mnemonicToSeed(mnemonic)
+    const root = bip32.fromSeed(seed)
+    const child = root.derivePath(BCH_DERIVATION_PATH)
+    const pubkey = child.publicKey
+    
+    // Convert to CashAddress using libauth
+    const ecPair = libauth.ECPair.fromPublicKey(pubkey)
+    const publicKeyHash = libauth.crypto.hash160(pubkey)
+    const cashAddressResult = libauth.encodeCashAddress(
+      libauth.CashAddressNetworkPrefix.Mainnet,
+      libauth.encodeP2pkhOutput(publicKeyHash)
+    )
+    
+    const cashAddress = cashAddressResult.cashAddress
+    
+    const fingerprint = child.fingerprint?.toString("hex") || "00000000"
+    
+    return {
+      mnemonic,
+      cashAddress,
+      fingerprint,
+      path: BCH_DERIVATION_PATH,
+      created: Date.now()
+    }
+  } catch (error) {
+    console.error("Wallet generation error:", error)
+    throw new Error(`Wallet generation failed: ${error.message}`)
   }
 }
 
