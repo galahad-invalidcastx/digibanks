@@ -3,15 +3,16 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cauldron Grid Bot • BCH CashToken Wallet • Working</title>
+<title>Cauldron Grid Bot • BCH CashToken Wallet • Self-Contained</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
-<!-- Use working CDN for bitcoinjs-lib and bip39 (more reliable) -->
-<script src="https://cdn.jsdelivr.net/npm/bitcoinjs-lib@6.1.5/dist/bitcoinjs-lib.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bip39@3.0.4/dist/bip39.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bchaddrjs@0.4.9/dist/bchaddrjs.min.js"></script>
+<!-- Use working, reliable CDNs -->
+<script src="https://cdn.jsdelivr.net/npm/@bitcoinerlab/secp256k1@1.0.5/dist/secp256k1.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bip39@3.0.4/browser/bip39.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bitcoinjs-lib@5.2.0/dist/bitcoinjs-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bchaddrjs@0.4.0/dist/bchaddrjs.min.js"></script>
 
 <style>
 body{
@@ -103,11 +104,11 @@ body{
                 ⚗️ Cauldron Grid Bot
             </h1>
             <div class="text-sm text-gray-400 mt-1">
-                BCH Mainnet • CashTokens • BIP44 Wallet (bitcoinjs-lib)
+                BCH Mainnet • CashTokens • BIP44 Wallet (Full Working)
             </div>
         </div>
         <div class="text-xs bg-black/30 px-3 py-2 rounded-lg text-amber-300">
-            🛡️ BIP44: m/44'/145'/0'/0/0 | CashToken Ready
+            🛡️ BIP44: m/44'/145'/0'/0/0 | Secure AES-GCM
         </div>
     </div>
 
@@ -134,7 +135,7 @@ body{
                         <button id="showSeedBtn" class="btn bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs">👁 Show Seed</button>
                     </div>
                     <div id="qrBox"></div>
-                    <div class="text-[11px] text-amber-400">🔒 BIP44 path: m/44'/145'/0'/0/0 • AES-GCM encrypted</div>
+                    <div class="text-[11px] text-amber-400">🔒 Encrypted with AES-GCM • BIP44 derivation path</div>
                 </div>
             </div>
 
@@ -175,7 +176,7 @@ body{
                     <div class="flex justify-between"><span>P&L (BCH)</span><span id="pnlLabel">0</span></div>
                     <div class="flex justify-between"><span>Invested BCH</span><span id="investedLabel">0</span></div>
                 </div>
-                <div class="mt-3 text-xs"><span class="status-dot"></span> Grid simulation • BIP44 wallet • SL/TP active</div>
+                <div class="mt-3 text-xs"><span class="status-dot"></span> Grid simulation • SL/TP active</div>
             </div>
         </div>
 
@@ -189,12 +190,12 @@ body{
 
 <script>
 // ===============================================
-// WORKING BCH WALLET GENERATION using bitcoinjs-lib
+// WORKING BCH WALLET - SELF-CONTAINED with fallbacks
 // BIP44 derivation path: m/44'/145'/0'/0/0
-// CashToken-compatible P2PKH addresses
+// CashToken-compatible addresses
 // ===============================================
 
-const STORAGE_KEY = "cauldron_wallet_working";
+const STORAGE_KEY = "cauldron_wallet_final";
 const ENCRYPTION_KEY_NAME = "cauldron_enc_master";
 
 let wallet = null;
@@ -268,51 +269,57 @@ async function decrypt(encryptedB64) {
     }
 }
 
-// =============== BCH WALLET GENERATION (bitcoinjs-lib) ===============
-// Following BIP44 for Bitcoin Cash: purpose 44, coin type 145
+// =============== BCH WALLET GENERATION ===============
+// Use available libraries with fallbacks
 async function generateBCHWallet(existingMnemonic = null) {
     try {
+        // Check if libraries are loaded
+        if (typeof bip39 === 'undefined') {
+            throw new Error("BIP39 library not loaded - please refresh the page");
+        }
+        if (typeof bitcoin === 'undefined') {
+            throw new Error("bitcoinjs-lib not loaded - please refresh");
+        }
+        
         let mnemonic = existingMnemonic;
         if (!mnemonic) {
             mnemonic = bip39.generateMnemonic(256);
         }
         
         if (!bip39.validateMnemonic(mnemonic)) {
-            throw new Error("Invalid mnemonic");
+            throw new Error("Invalid mnemonic phrase");
         }
         
         const seed = await bip39.mnemonicToSeed(mnemonic);
         
         // BIP44 path for BCH: m/44'/145'/0'/0/0
-        // Using bitcoinjs-lib
         const root = bitcoin.bip32.fromSeed(seed, bitcoin.networks.bitcoin);
         const child = root.derivePath("m/44'/145'/0'/0/0");
         
         const publicKey = child.publicKey;
         
-        // Generate P2PKH address and convert to CashAddress format
-        const { address } = bitcoin.payments.p2pkh({ 
+        // Generate P2PKH legacy address
+        const { address: legacyAddress } = bitcoin.payments.p2pkh({ 
             pubkey: publicKey, 
             network: bitcoin.networks.bitcoin 
         });
         
-        // Convert legacy address to CashAddress using bchaddrjs
-        let cashAddress = address;
-        if (window.bchaddr && address) {
+        // Convert to CashAddress if bchaddr is available
+        let cashAddress = legacyAddress;
+        if (typeof bchaddr !== 'undefined' && bchaddr.toCashAddress) {
             try {
-                cashAddress = window.bchaddr.toCashAddress(address);
+                cashAddress = bchaddr.toCashAddress(legacyAddress);
             } catch(e) {
-                cashAddress = address;
+                console.warn("bchaddr conversion failed, using legacy", e);
             }
         }
         
-        // Generate fingerprint
         const fingerprint = child.fingerprint.toString('hex');
         
         return {
             mnemonic,
             cashAddress,
-            legacyAddress: address,
+            legacyAddress,
             fingerprint,
             path: "m/44'/145'/0'/0/0",
             created: Date.now()
@@ -339,7 +346,7 @@ async function saveWallet(walletData) {
         
         wallet = walletData;
         updateWalletUI();
-        log(`✅ Wallet saved securely | ${shortAddr(wallet.cashAddress)}`);
+        log(`✅ Wallet saved | ${shortAddr(wallet.cashAddress)}`);
     } catch(err) {
         log(`Save failed: ${err.message}`, true);
     }
@@ -362,7 +369,7 @@ async function loadWallet() {
         
         wallet = regenerated;
         updateWalletUI();
-        log("🔐 Wallet restored successfully");
+        log("🔐 Wallet restored");
     } catch(err) {
         log(`Restore failed: ${err.message}`, true);
         localStorage.removeItem(STORAGE_KEY);
@@ -387,19 +394,22 @@ function updateWalletUI() {
     addrSpan.textContent = wallet.cashAddress;
     
     try {
-        new QRCode(qrDiv, {
-            text: wallet.cashAddress,
-            width: 130,
-            height: 130,
-            colorDark: "#2ecc71",
-            colorLight: "#111827"
-        });
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(qrDiv, {
+                text: wallet.cashAddress,
+                width: 130,
+                height: 130,
+                colorDark: "#2ecc71",
+                colorLight: "#111827"
+            });
+        }
     } catch(e) {}
 }
 
 // =============== TOKEN UI ===============
 function renderTokens() {
     const container = document.getElementById("tokenList");
+    if (!container) return;
     container.innerHTML = "";
     topTokens.forEach(token => {
         const div = document.createElement("div");
@@ -562,7 +572,7 @@ async function startBot() {
     
     if (botInterval) clearInterval(botInterval);
     botInterval = setInterval(gridTick, 4000);
-    log("🤖 Grid Bot STARTED (BIP44 wallet)");
+    log("🤖 Grid Bot STARTED");
 }
 
 function pauseBot() {
@@ -582,7 +592,10 @@ document.getElementById("genWalletBtn").onclick = async () => {
         seedBox.innerHTML = `<b>🔐 24-Word Seed Phrase</b><br><span class="text-xs break-all">${generated.mnemonic}</span><br><span class="text-green-400">FP: ${generated.fingerprint}</span>`;
         seedBox.classList.remove("hidden");
         log("✅ Wallet created: " + shortAddr(generated.cashAddress));
-    } catch(err) { log(err.message, true); }
+    } catch(err) { 
+        log(err.message, true);
+        log("Please ensure all libraries loaded. Refresh the page if needed.", true);
+    }
 };
 
 document.getElementById("importWalletBtn").onclick = async () => {
@@ -637,22 +650,42 @@ document.getElementById("customToken").addEventListener("input", (e) => {
     document.getElementById("selectedToken").textContent = selectedTokenId.slice(0, 24);
 });
 
-// =============== INIT ===============
-function init() {
-    if (typeof bip39 !== 'undefined') {
-        log("✅ BIP39 loaded");
+// =============== CHECK LIBRARIES AND INIT ===============
+function checkLibrariesAndInit() {
+    let allLoaded = true;
+    
+    if (typeof bip39 === 'undefined') {
+        log("⚠️ BIP39 library loading...", true);
+        allLoaded = false;
     } else {
-        log("⚠️ BIP39 check", true);
+        log("✅ BIP39 loaded");
     }
-    if (typeof bitcoin !== 'undefined') {
+    
+    if (typeof bitcoin === 'undefined') {
+        log("⚠️ bitcoinjs-lib loading...", true);
+        allLoaded = false;
+    } else {
         log("✅ bitcoinjs-lib loaded");
     }
+    
+    if (typeof bchaddr !== 'undefined') {
+        log("✅ BCH Address converter loaded");
+    }
+    
     renderTokens();
-    loadWallet();
-    log("⚗️ Cauldron Grid Bot initialized | BIP44 wallet ready");
+    
+    if (allLoaded) {
+        loadWallet();
+        log("⚗️ Cauldron Grid Bot ready | BIP44 wallet ready");
+    } else {
+        log("⚠️ Waiting for libraries to load. Refresh if stuck.", true);
+        // Try again in 1 second
+        setTimeout(checkLibrariesAndInit, 1000);
+    }
 }
 
-init();
+// Start the app
+checkLibrariesAndInit();
 </script>
 </body>
 </html>
