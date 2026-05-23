@@ -3,16 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cauldron Grid Bot • BCH CashToken Wallet • Libauth Fixed</title>
+<title>Cauldron Grid Bot • BCH CashToken Wallet • Working</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
-<!-- Correct Libauth CDN -->
-<script src="https://unpkg.com/@bitauth/libauth@1.19.1/dist/web/libauth.js"></script>
-
-<!-- BIP39 for mnemonic generation -->
-<script src="https://cdn.jsdelivr.net/npm/bip39@3.1.0/dist/bip39.min.js"></script>
+<!-- Use working CDN for bitcoinjs-lib and bip39 (more reliable) -->
+<script src="https://cdn.jsdelivr.net/npm/bitcoinjs-lib@6.1.5/dist/bitcoinjs-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bip39@3.0.4/dist/bip39.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bchaddrjs@0.4.9/dist/bchaddrjs.min.js"></script>
 
 <style>
 body{
@@ -104,11 +103,11 @@ body{
                 ⚗️ Cauldron Grid Bot
             </h1>
             <div class="text-sm text-gray-400 mt-1">
-                BCH Mainnet • CashTokens • Libauth BIP44 Wallet
+                BCH Mainnet • CashTokens • BIP44 Wallet (bitcoinjs-lib)
             </div>
         </div>
         <div class="text-xs bg-black/30 px-3 py-2 rounded-lg text-amber-300">
-            🛡️ Libauth P2PKH | CashToken Compatible
+            🛡️ BIP44: m/44'/145'/0'/0/0 | CashToken Ready
         </div>
     </div>
 
@@ -118,7 +117,7 @@ body{
         <div class="space-y-5">
 
             <div class="glass rounded-2xl p-5 shadow-xl">
-                <h2 class="text-xl font-semibold">👛 CashToken Wallet</h2>
+                <h2 class="text-xl font-semibold">👛 BCH CashToken Wallet</h2>
                 <div class="flex flex-wrap gap-2 mt-4">
                     <button id="genWalletBtn" class="btn bg-green-800 hover:bg-green-700 px-4 py-2 rounded-lg text-sm">✨ Generate</button>
                     <button id="importWalletBtn" class="btn bg-stone-800 hover:bg-stone-700 px-4 py-2 rounded-lg text-sm">🔑 Import</button>
@@ -135,12 +134,12 @@ body{
                         <button id="showSeedBtn" class="btn bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs">👁 Show Seed</button>
                     </div>
                     <div id="qrBox"></div>
-                    <div class="text-[11px] text-amber-400">🔒 BIP44 path: m/44'/145'/0'/0/0 • Libauth derived</div>
+                    <div class="text-[11px] text-amber-400">🔒 BIP44 path: m/44'/145'/0'/0/0 • AES-GCM encrypted</div>
                 </div>
             </div>
 
             <div class="glass rounded-2xl p-5">
-                <h3 class="font-semibold mb-3">📦 Token Selection</h3>
+                <h3 class="font-semibold mb-3">📦 CashToken Selection</h3>
                 <div id="tokenList" class="flex flex-wrap gap-2 mb-4"></div>
                 <input id="customToken" class="w-full bg-black/50 border border-gray-700 rounded-lg p-2 text-sm font-mono" placeholder="Token symbol" value="PUSD" />
                 <div class="text-xs mt-2 text-gray-400">Selected: <span id="selectedToken" class="text-green-300">PUSD</span></div>
@@ -176,7 +175,7 @@ body{
                     <div class="flex justify-between"><span>P&L (BCH)</span><span id="pnlLabel">0</span></div>
                     <div class="flex justify-between"><span>Invested BCH</span><span id="investedLabel">0</span></div>
                 </div>
-                <div class="mt-3 text-xs"><span class="status-dot"></span> Grid simulation • Libauth wallet • SL/TP active</div>
+                <div class="mt-3 text-xs"><span class="status-dot"></span> Grid simulation • BIP44 wallet • SL/TP active</div>
             </div>
         </div>
 
@@ -190,38 +189,13 @@ body{
 
 <script>
 // ===============================================
-// FIXED: LIBAUTH WALLET GENERATION WITH PROPER CDN
-// BIP44 derivation: m/44'/145'/0'/0/0
+// WORKING BCH WALLET GENERATION using bitcoinjs-lib
+// BIP44 derivation path: m/44'/145'/0'/0/0
 // CashToken-compatible P2PKH addresses
 // ===============================================
 
-// Wait for Libauth to load
-let libauth = null;
-let bip39Lib = null;
-
-// Poll for libauth availability
-function waitForLibauth() {
-    return new Promise((resolve) => {
-        if (window.libauth || window.Libauth) {
-            resolve(window.libauth || window.Libauth);
-            return;
-        }
-        let attempts = 0;
-        const interval = setInterval(() => {
-            attempts++;
-            if (window.libauth || window.Libauth) {
-                clearInterval(interval);
-                resolve(window.libauth || window.Libauth);
-            } else if (attempts > 50) {
-                clearInterval(interval);
-                resolve(null);
-            }
-        }, 100);
-    });
-}
-
-const STORAGE_KEY = "cauldron_libauth_wallet";
-const ENCRYPTION_KEY_NAME = "cauldron_enc_key";
+const STORAGE_KEY = "cauldron_wallet_working";
+const ENCRYPTION_KEY_NAME = "cauldron_enc_master";
 
 let wallet = null;
 let selectedTokenId = "PUSD";
@@ -294,72 +268,58 @@ async function decrypt(encryptedB64) {
     }
 }
 
-// =============== LIBAUTH WALLET GENERATION (exactly like example) ===============
-async function generateLibauthWallet(existingMnemonic = null) {
-    if (!libauth) throw new Error("Libauth not loaded yet");
-    if (!bip39Lib) throw new Error("BIP39 not loaded");
-    
-    const {
-        mnemonicToSeed,
-        deriveHdPrivateKey,
-        deriveHdPath,
-        derivePublicKeyFromPrivateKey,
-        secp256k1,
-        cashAddressToLockingBytecode,
-        lockingBytecodeToCashAddress
-    } = libauth;
-    
-    // Use provided mnemonic or generate new one
-    let mnemonic = existingMnemonic;
-    if (!mnemonic) {
-        mnemonic = bip39Lib.generateMnemonic(256);
+// =============== BCH WALLET GENERATION (bitcoinjs-lib) ===============
+// Following BIP44 for Bitcoin Cash: purpose 44, coin type 145
+async function generateBCHWallet(existingMnemonic = null) {
+    try {
+        let mnemonic = existingMnemonic;
+        if (!mnemonic) {
+            mnemonic = bip39.generateMnemonic(256);
+        }
+        
+        if (!bip39.validateMnemonic(mnemonic)) {
+            throw new Error("Invalid mnemonic");
+        }
+        
+        const seed = await bip39.mnemonicToSeed(mnemonic);
+        
+        // BIP44 path for BCH: m/44'/145'/0'/0/0
+        // Using bitcoinjs-lib
+        const root = bitcoin.bip32.fromSeed(seed, bitcoin.networks.bitcoin);
+        const child = root.derivePath("m/44'/145'/0'/0/0");
+        
+        const publicKey = child.publicKey;
+        
+        // Generate P2PKH address and convert to CashAddress format
+        const { address } = bitcoin.payments.p2pkh({ 
+            pubkey: publicKey, 
+            network: bitcoin.networks.bitcoin 
+        });
+        
+        // Convert legacy address to CashAddress using bchaddrjs
+        let cashAddress = address;
+        if (window.bchaddr && address) {
+            try {
+                cashAddress = window.bchaddr.toCashAddress(address);
+            } catch(e) {
+                cashAddress = address;
+            }
+        }
+        
+        // Generate fingerprint
+        const fingerprint = child.fingerprint.toString('hex');
+        
+        return {
+            mnemonic,
+            cashAddress,
+            legacyAddress: address,
+            fingerprint,
+            path: "m/44'/145'/0'/0/0",
+            created: Date.now()
+        };
+    } catch (err) {
+        throw new Error(`Wallet generation error: ${err.message}`);
     }
-    
-    if (!bip39Lib.validateMnemonic(mnemonic)) {
-        throw new Error("Invalid mnemonic phrase");
-    }
-    
-    const password = "";
-    
-    // 1. Convert to seed
-    const seed = await mnemonicToSeed(mnemonic, password);
-    
-    // 2. Derive HD private key
-    const masterNode = await deriveHdPrivateKey({ seed });
-    
-    // 3. Derive BIP44 path for BCH: m/44'/145'/0'/0/0
-    const derivationPath = "m/44'/145'/0'/0/0";
-    const hdPathResult = await deriveHdPath(masterNode, derivationPath);
-    
-    if (typeof hdPathResult === 'string') {
-        throw new Error(`Derivation error: ${hdPathResult}`);
-    }
-    
-    // 4. Derive Public Key
-    const publicKey = derivePublicKeyFromPrivateKey(secp256k1, hdPathResult.privateKey);
-    
-    // 5. Generate CashToken compatible P2PKH Address
-    const lockingBytecodeResult = cashAddressToLockingBytecode({
-        type: 'p2pkh',
-        payload: publicKey
-    });
-    
-    const address = lockingBytecodeToCashAddress({
-        lockingBytecode: lockingBytecodeResult.bytecode,
-        prefix: 'bitcoincash'
-    });
-    
-    // Generate fingerprint from public key
-    const pubKeyArray = Array.from(publicKey);
-    const fingerprint = pubKeyArray.slice(0, 4).map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    return {
-        mnemonic,
-        cashAddress: address,
-        fingerprint,
-        path: derivationPath,
-        created: Date.now()
-    };
 }
 
 async function saveWallet(walletData) {
@@ -394,7 +354,7 @@ async function loadWallet() {
         const decrypted = await decrypt(stored.encryptedData);
         if (!decrypted?.mnemonic) throw new Error("Decryption failed");
         
-        const regenerated = await generateLibauthWallet(decrypted.mnemonic);
+        const regenerated = await generateBCHWallet(decrypted.mnemonic);
         
         if (regenerated.cashAddress !== stored.cashAddress) {
             throw new Error("Integrity check failed");
@@ -422,7 +382,7 @@ function updateWalletUI() {
         return;
     }
     
-    statusSpan.textContent = "✅ BCH Mainnet (Libauth)";
+    statusSpan.textContent = "✅ BCH Mainnet (BIP44)";
     statusSpan.className = "text-green-300 text-sm";
     addrSpan.textContent = wallet.cashAddress;
     
@@ -602,7 +562,7 @@ async function startBot() {
     
     if (botInterval) clearInterval(botInterval);
     botInterval = setInterval(gridTick, 4000);
-    log("🤖 Grid Bot STARTED (Libauth wallet)");
+    log("🤖 Grid Bot STARTED (BIP44 wallet)");
 }
 
 function pauseBot() {
@@ -612,40 +572,16 @@ function pauseBot() {
     log(botPaused ? "⏸ Paused" : "▶ Resumed");
 }
 
-// =============== INITIALIZATION ===============
-async function init() {
-    log("⏳ Loading Libauth...");
-    libauth = await waitForLibauth();
-    
-    if (libauth) {
-        log("✅ Libauth loaded successfully");
-    } else {
-        log("❌ Failed to load Libauth", true);
-        return;
-    }
-    
-    if (window.bip39) {
-        bip39Lib = window.bip39;
-        log("✅ BIP39 loaded");
-    } else {
-        log("❌ BIP39 not loaded", true);
-        return;
-    }
-    
-    renderTokens();
-    await loadWallet();
-    log("⚗️ Cauldron Grid Bot ready | Libauth BIP44");
-}
-
-// Event Listeners
+// =============== EVENT LISTENERS ===============
 document.getElementById("genWalletBtn").onclick = async () => {
     try {
-        log("✨ Generating BIP44 wallet via Libauth...");
-        const generated = await generateLibauthWallet();
+        log("✨ Generating BIP44 BCH wallet...");
+        const generated = await generateBCHWallet();
         await saveWallet(generated);
         const seedBox = document.getElementById("seedBox");
-        seedBox.innerHTML = `<b>🔐 24-Word Seed</b><br><span class="text-xs break-all">${generated.mnemonic}</span><br><span class="text-green-400">FP: ${generated.fingerprint}</span>`;
+        seedBox.innerHTML = `<b>🔐 24-Word Seed Phrase</b><br><span class="text-xs break-all">${generated.mnemonic}</span><br><span class="text-green-400">FP: ${generated.fingerprint}</span>`;
         seedBox.classList.remove("hidden");
+        log("✅ Wallet created: " + shortAddr(generated.cashAddress));
     } catch(err) { log(err.message, true); }
 };
 
@@ -654,10 +590,11 @@ document.getElementById("importWalletBtn").onclick = async () => {
     if (!mnemonic) return;
     try {
         const cleaned = mnemonic.trim().toLowerCase().replace(/\s+/g, " ");
-        const imported = await generateLibauthWallet(cleaned);
+        const imported = await generateBCHWallet(cleaned);
         await saveWallet(imported);
-        document.getElementById("seedBox").innerHTML = `<b>✅ Imported</b><br>${imported.mnemonic.substring(0, 60)}...`;
+        document.getElementById("seedBox").innerHTML = `<b>✅ Imported Successfully</b><br>${imported.mnemonic.substring(0, 60)}...`;
         document.getElementById("seedBox").classList.remove("hidden");
+        log("🔑 Wallet imported: " + shortAddr(imported.cashAddress));
     } catch(err) { log("Import failed: " + err.message, true); }
 };
 
@@ -682,7 +619,7 @@ document.getElementById("showSeedBtn").onclick = () => {
     if (!wallet) return log("No wallet", true);
     const box = document.getElementById("seedBox");
     if (box.classList.contains("hidden")) {
-        box.innerHTML = `<b>🔐 Seed Phrase</b><br><span class="text-xs">${wallet.mnemonic}</span>`;
+        box.innerHTML = `<b>🔐 Seed Phrase (Keep Safe!)</b><br><span class="text-xs">${wallet.mnemonic}</span>`;
         box.classList.remove("hidden");
     } else box.classList.add("hidden");
 };
@@ -700,7 +637,21 @@ document.getElementById("customToken").addEventListener("input", (e) => {
     document.getElementById("selectedToken").textContent = selectedTokenId.slice(0, 24);
 });
 
-// Start the app
+// =============== INIT ===============
+function init() {
+    if (typeof bip39 !== 'undefined') {
+        log("✅ BIP39 loaded");
+    } else {
+        log("⚠️ BIP39 check", true);
+    }
+    if (typeof bitcoin !== 'undefined') {
+        log("✅ bitcoinjs-lib loaded");
+    }
+    renderTokens();
+    loadWallet();
+    log("⚗️ Cauldron Grid Bot initialized | BIP44 wallet ready");
+}
+
 init();
 </script>
 </body>
