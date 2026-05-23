@@ -1,11 +1,32 @@
 // src/utils/wallet.js
 import * as bip39 from 'bip39'
 
+// src/utils/wallet.js
+import * as bip39 from 'bip39'
+
+async function waitForLibauth() {
+  if (window.libauth || window.Libauth) return window.libauth || window.Libauth
+  return new Promise((resolve) => {
+    const check = setInterval(() => {
+      if (window.libauth || window.Libauth) {
+        clearInterval(check)
+        resolve(window.libauth || window.Libauth)
+      }
+    }, 50)
+  })
+}
+
+const libauth = await waitForLibauth()
+// ... rest of the code
+
+
 // Libauth is loaded globally from CDN (see index.html)
+/*
 const libauth = window.libauth || window.Libauth
 if (!libauth) {
   throw new Error('Libauth not loaded. Please refresh the page.')
 }
+*/
 
 const {
   mnemonicToSeed,
