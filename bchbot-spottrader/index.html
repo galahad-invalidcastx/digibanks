@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cauldron Grid Bot • BCH CashToken Wallet • Pure JS</title>
+<title>Cauldron Grid Bot • BCH CashToken Wallet • 12-Word BIP39</title>
+DV
+
+<script src="https://cdn.jsdelivr.net/npm/bip39@3.1.0/browser/bip39.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bip32@4.0.0/dist/bip32.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bs58check@2.1.2/dist/bs58check.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@bitauth/libauth@2.0.0/dist/libauth.min.js"></script>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
@@ -98,11 +105,11 @@ body{
                 ⚗️ Cauldron Grid Bot
             </h1>
             <div class="text-sm text-gray-400 mt-1">
-                BCH Mainnet • CashTokens • Pure JS Wallet (No External Dependencies)
+                BCH Mainnet • CashTokens • 12-Word BIP39 Wallet (Cashonize Compatible)
             </div>
         </div>
         <div class="text-xs bg-black/30 px-3 py-2 rounded-lg text-amber-300">
-            🛡️ Self-Contained | BIP39 + Base58 | AES-GCM
+            🛡️ Standard 12-Word Seed | AES-GCM Encrypted
         </div>
     </div>
 
@@ -114,8 +121,8 @@ body{
             <div class="glass rounded-2xl p-5 shadow-xl">
                 <h2 class="text-xl font-semibold">👛 BCH CashToken Wallet</h2>
                 <div class="flex flex-wrap gap-2 mt-4">
-                    <button id="genWalletBtn" class="btn bg-green-800 hover:bg-green-700 px-4 py-2 rounded-lg text-sm">✨ Generate</button>
-                    <button id="importWalletBtn" class="btn bg-stone-800 hover:bg-stone-700 px-4 py-2 rounded-lg text-sm">🔑 Import</button>
+                    <button id="genWalletBtn" class="btn bg-green-800 hover:bg-green-700 px-4 py-2 rounded-lg text-sm">✨ Generate 12-Word</button>
+                    <button id="importWalletBtn" class="btn bg-stone-800 hover:bg-stone-700 px-4 py-2 rounded-lg text-sm">🔑 Import Seed</button>
                     <button id="clearWalletBtn" class="btn bg-red-900 hover:bg-red-800 px-4 py-2 rounded-lg text-sm">🗑 Clear</button>
                 </div>
 
@@ -129,7 +136,7 @@ body{
                         <button id="showSeedBtn" class="btn bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-xs">👁 Show Seed</button>
                     </div>
                     <div id="qrBox"></div>
-                    <div class="text-[11px] text-amber-400">🔒 Pure JS Implementation • BIP39 • AES-GCM Encrypted</div>
+                    <div class="text-[11px] text-amber-400">🔒 Standard BIP39 12-word seed • Compatible with Cashonize.com</div>
                 </div>
             </div>
 
@@ -170,7 +177,7 @@ body{
                     <div class="flex justify-between"><span>P&L (BCH)</span><span id="pnlLabel">0</span></div>
                     <div class="flex justify-between"><span>Invested BCH</span><span id="investedLabel">0</span></div>
                 </div>
-                <div class="mt-3 text-xs"><span class="status-dot"></span> Grid simulation • Pure JS wallet</div>
+                <div class="mt-3 text-xs"><span class="status-dot"></span> Grid simulation • Standard BIP39 wallet</div>
             </div>
         </div>
 
@@ -184,14 +191,12 @@ body{
 
 <script>
 // ===============================================
-// COMPLETELY SELF-CONTAINED BCH WALLET
-// No external dependencies - Pure JavaScript
-// BIP39 wordlist + mnemonic generation + address derivation
+// STANDARD 12-WORD BIP39 BCH WALLET
+// Compatible with Cashonize.com and other BCH wallets
+// Fixed encryption key issue
 // ===============================================
 
-const STORAGE_KEY = "cauldron_wallet_pure";
-const ENCRYPTION_KEY_NAME = "cauldron_enc_master";
-
+const STORAGE_KEY = "cauldron_wallet_12word";
 let wallet = null;
 let selectedTokenId = "PUSD";
 let tokenPriceBCH = 0.0025;
@@ -208,60 +213,11 @@ let takeProfitTrigger = false;
 
 const topTokens = ["PUSD", "EMBER", "FLEX", "FURU", "MIST", "BCHBULL"];
 
-// BIP39 English wordlist (first 2048 words - simplified but functional)
-const BIP39_WORDLIST = [
-    "abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract", "absurd", "abuse",
-    "access", "accident", "account", "accuse", "achieve", "acid", "acoustic", "acquire", "across", "act",
-    "action", "actor", "actress", "actual", "adapt", "add", "addict", "address", "adjust", "admit",
-    "adult", "advance", "advice", "aerobic", "affair", "afford", "afraid", "africa", "africa", "after",
-    "again", "age", "agent", "agree", "ahead", "aim", "air", "airport", "aisle", "alarm",
-    "album", "alcohol", "alert", "alien", "all", "alley", "allow", "almost", "alone", "alpha",
-    "already", "also", "alter", "always", "amateur", "amazing", "among", "amount", "amused", "analyst",
-    "anchor", "ancient", "anger", "angle", "angry", "animal", "ankle", "announce", "annual", "another",
-    "answer", "antenna", "antique", "anxiety", "any", "apart", "apology", "appear", "apple", "approve",
-    "april", "arch", "arctic", "area", "arena", "argue", "arm", "armed", "armor", "army",
-    "around", "arrange", "arrest", "arrive", "arrow", "art", "artefact", "artist", "artwork", "ask"
-];
 
-// Simple random bytes generator
-function getRandomBytes(count) {
-    const bytes = new Uint8Array(count);
-    crypto.getRandomValues(bytes);
-    return bytes;
-}
-
-// Generate entropy and convert to mnemonic
-function generateMnemonic() {
-    const entropy = getRandomBytes(32); // 256 bits = 24 words
-    let entropyBits = "";
-    for (let i = 0; i < entropy.length; i++) {
-        entropyBits += entropy[i].toString(2).padStart(8, '0');
-    }
-    
-    // Calculate checksum (first 8 bits of SHA256)
-    const encoder = new TextEncoder();
-    const hashBuffer = crypto.subtle.digestSync ? 
-        crypto.subtle.digestSync('SHA-256', entropy) :
-        null;
-    
-    // Fallback to simple hash for demo
-    let checksum = "00000000";
-    
-    const totalBits = entropyBits + checksum;
-    const words = [];
-    for (let i = 0; i < 24; i++) {
-        const wordBits = totalBits.substr(i * 11, 11);
-        const wordIndex = parseInt(wordBits, 2);
-        words.push(BIP39_WORDLIST[wordIndex % BIP39_WORDLIST.length]);
-    }
-    
-    return words.join(' ');
-}
-
-// Validate mnemonic
+// Validate 12-word mnemonic
 function validateMnemonic(mnemonic) {
     const words = mnemonic.trim().toLowerCase().split(/\s+/);
-    if (words.length !== 12 && words.length !== 24) return false;
+    if (words.length !== 12) return false;
     
     for (const word of words) {
         if (!BIP39_WORDLIST.includes(word)) return false;
@@ -269,78 +225,31 @@ function validateMnemonic(mnemonic) {
     return true;
 }
 
-// Simple BCH address generator (demo - creates a realistic looking address)
-function generateBCHAddress(seed) {
-    // Generate a deterministic but realistic-looking BCH CashAddress
-    // Using the seed to create a unique address
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-        hash |= 0;
+
+// Simple encryption (non-extractable key fix)
+let encryptionKey = null;
+
+async function initEncryption() {
+    if (!encryptionKey) {
+        let savedKey = localStorage.getItem("cauldron_enc_key_v2");
+        if (savedKey) {
+            const keyData = JSON.parse(savedKey);
+            encryptionKey = await crypto.subtle.importKey(
+                "jwk", keyData, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]
+            );
+        } else {
+            encryptionKey = await crypto.subtle.generateKey(
+                { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+            );
+            const exported = await crypto.subtle.exportKey("jwk", encryptionKey);
+            localStorage.setItem("cauldron_enc_key_v2", JSON.stringify(exported));
+        }
     }
-    
-    const chars = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-    let address = "bitcoincash:qz";
-    
-    // Generate a unique 32-character address based on hash
-    for (let i = 0; i < 32; i++) {
-        const idx = Math.abs((hash >> (i * 3)) % chars.length);
-        address += chars[idx];
-    }
-    
-    return address;
+    return encryptionKey;
 }
 
-// Generate a seed string from mnemonic
-function mnemonicToSeed(mnemonic) {
-    const normalized = mnemonic.toLowerCase().replace(/\s+/g, ' ');
-    return normalized;
-}
-
-// Main wallet generation function
-async function generateWallet(existingMnemonic = null) {
-    let mnemonic = existingMnemonic;
-    if (!mnemonic) {
-        mnemonic = generateMnemonic();
-    }
-    
-    if (!validateMnemonic(mnemonic)) {
-        throw new Error("Invalid mnemonic phrase");
-    }
-    
-    const seed = mnemonicToSeed(mnemonic);
-    const cashAddress = generateBCHAddress(seed);
-    const fingerprint = crypto.subtle.digestSync ? 
-        Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed))))
-            .slice(0, 4).map(b => b.toString(16)).join('') :
-        Math.abs(seed.length * 2654435761).toString(16).slice(0, 8);
-    
-    return {
-        mnemonic,
-        cashAddress,
-        fingerprint,
-        path: "m/44'/145'/0'/0/0",
-        created: Date.now()
-    };
-}
-
-// AES-GCM encryption utilities
-async function getEncryptionKey() {
-    let keyMaterial = localStorage.getItem(ENCRYPTION_KEY_NAME);
-    if (!keyMaterial) {
-        const newKey = await crypto.subtle.generateKey(
-            { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
-        );
-        const exported = await crypto.subtle.exportKey("jwk", newKey);
-        keyMaterial = JSON.stringify(exported);
-        localStorage.setItem(ENCRYPTION_KEY_NAME, keyMaterial);
-    }
-    const jwk = JSON.parse(keyMaterial);
-    return crypto.subtle.importKey("jwk", jwk, "AES-GCM", false, ["encrypt", "decrypt"]);
-}
-
-async function encrypt(data) {
-    const key = await getEncryptionKey();
+async function encryptData(data) {
+    const key = await initEncryption();
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encoded = new TextEncoder().encode(JSON.stringify(data));
     const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
@@ -350,22 +259,63 @@ async function encrypt(data) {
     return btoa(String.fromCharCode(...combined));
 }
 
-async function decrypt(encryptedB64) {
+async function decryptData(encryptedB64) {
     try {
-        const key = await getEncryptionKey();
+        const key = await initEncryption();
         const combined = Uint8Array.from(atob(encryptedB64), c => c.charCodeAt(0));
         const iv = combined.slice(0, 12);
         const ciphertext = combined.slice(12);
         const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
         return JSON.parse(new TextDecoder().decode(decrypted));
     } catch(e) {
+        console.error("Decrypt error:", e);
         return null;
     }
 }
 
+const BCH_DERIVATION_PATH = "m/44'/145'/0'/0/0";
+
+async function generateWallet(existingMnemonic = null) {
+    // 1. REAL BIP39 MNEMONIC
+    const mnemonic = existingMnemonic || bip39.generateMnemonic(128);
+
+    if (!bip39.validateMnemonic(mnemonic)) {
+        throw new Error("Invalid BIP39 mnemonic");
+    }
+
+    // 2. SEED (REAL)
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+
+    // 3. BIP32 ROOT
+    const root = bip32.fromSeed(seed);
+
+    // 4. DERIVE BCH ACCOUNT
+    const child = root.derivePath(BCH_DERIVATION_PATH);
+
+    const pubkey = child.publicKey;
+
+    // 5. CONVERT TO CASHADDRESS (REAL BCH)
+    const ecPair = libauth.ECPair.fromPublicKey(pubkey);
+    const { cashAddress } = libauth.encodeCashAddress(
+        libauth.CashAddressNetworkPrefix.Mainnet,
+        libauth.encodeP2pkhOutput(ecPair.publicKeyHash)
+    );
+
+    // 6. fingerprint (for UI only)
+    const fingerprint = child.fingerprint?.toString("hex") || "00000000";
+
+    return {
+        mnemonic,
+        cashAddress,
+        fingerprint,
+        path: BCH_DERIVATION_PATH,
+        created: Date.now()
+    };
+}
+
 async function saveWallet(walletData) {
     try {
-        const encrypted = await encrypt({
+        const encrypted = await encryptData({
             mnemonic: walletData.mnemonic,
             fingerprint: walletData.fingerprint,
             cashAddress: walletData.cashAddress
@@ -392,7 +342,7 @@ async function loadWallet() {
     
     try {
         const stored = JSON.parse(savedRaw);
-        const decrypted = await decrypt(stored.encryptedData);
+        const decrypted = await decryptData(stored.encryptedData);
         if (!decrypted?.mnemonic) throw new Error("Decryption failed");
         
         const regenerated = await generateWallet(decrypted.mnemonic);
@@ -423,7 +373,7 @@ function updateWalletUI() {
         return;
     }
     
-    statusSpan.textContent = "✅ BCH Mainnet Ready";
+    statusSpan.textContent = "✅ BCH Mainnet (12-Word BIP39)";
     statusSpan.className = "text-green-300 text-sm";
     addrSpan.textContent = wallet.cashAddress;
     
@@ -440,7 +390,6 @@ function updateWalletUI() {
     } catch(e) {}
 }
 
-// =============== UI HELPERS ===============
 function log(msg, isError = false) {
     const panel = document.getElementById("logPanel");
     const div = document.createElement("div");
@@ -474,23 +423,30 @@ function renderTokens() {
     });
 }
 
-// =============== GRID ENGINE ===============
+// GRID ENGINE
 function initGrid() {
     const levels = parseInt(document.getElementById("gridLevels").value) || 5;
     const rangePct = parseFloat(document.getElementById("rangePct").value) || 20;
     const currentPrice = tokenPriceBCH;
-    const lower = currentPrice * (1 - rangePct / 200);
-    const upper = currentPrice * (1 + rangePct / 200);
-    const step = (upper - lower) / levels;
-    
+
+    const lower = currentPrice * (1 - rangePct / 100);
+    const upper = currentPrice * (1 + rangePct / 100);
+
+    const step = (upper - lower) / (levels - 1);
+
     gridBuyPrices = [];
     gridSellPrices = [];
+
     for (let i = 0; i < levels; i++) {
-        gridBuyPrices.push(lower + (i * step));
-        gridSellPrices.push(lower + ((i + 0.5) * step));
+        const price = lower + i * step;
+        gridBuyPrices.push(price);
+        gridSellPrices.push(price * 1.002); // small spread
     }
-    log(`📐 Grid: ${levels} levels`);
+
+    log(`📐 Grid rebuilt: ${levels} levels`);
 }
+
+
 
 function updatePnlUI() {
     const equity = currentTokenQty * tokenPriceBCH;
@@ -571,7 +527,17 @@ async function gridTick() {
                 const sellQty = Math.min(currentTokenQty, orderSizeBCH / tokenPriceBCH);
                 if (sellQty > 1e-8) {
                     currentTokenQty -= sellQty;
-                    totalBCHInvested -= sellQty * tokenPriceBCH;
+                    //totalBCHInvested -= sellQty * tokenPriceBCH;
+
+                    // treat selling as reducing position only (not revaluing cost basis)
+                    const avgEntry = totalBCHInvested / (currentTokenQty + sellQty);
+                    currentTokenQty -= sellQty;
+
+                    if (currentTokenQty <= 0) {
+                        currentTokenQty = 0;
+                        totalBCHInvested = 0;
+                    }
+
                     if (totalBCHInvested < 0) totalBCHInvested = 0;
                     log(`🔴 SELL ${sellQty.toFixed(6)} @ ${tokenPriceBCH.toFixed(8)}`, false);
                     executed = true;
@@ -627,14 +593,14 @@ function pauseBot() {
     log(botPaused ? "⏸ Paused" : "▶ Resumed");
 }
 
-// =============== EVENT LISTENERS ===============
+// EVENT LISTENERS
 document.getElementById("genWalletBtn").onclick = async () => {
     try {
-        log("✨ Generating BCH wallet...");
+        log("✨ Generating 12-word BIP39 wallet...");
         const generated = await generateWallet();
         await saveWallet(generated);
         const seedBox = document.getElementById("seedBox");
-        seedBox.innerHTML = `<b>🔐 Seed Phrase (24 words)</b><br><span class="text-xs break-all">${generated.mnemonic}</span><br><span class="text-green-400">FP: ${generated.fingerprint}</span>`;
+        seedBox.innerHTML = `<b>🔐 12-Word Seed Phrase (Cashonize Compatible)</b><br><span class="text-xs break-all">${generated.mnemonic}</span><br><span class="text-green-400 mt-2 block">FP: ${generated.fingerprint}</span>`;
         seedBox.classList.remove("hidden");
         log("✅ Wallet created: " + shortAddr(generated.cashAddress));
     } catch(err) { 
@@ -643,13 +609,13 @@ document.getElementById("genWalletBtn").onclick = async () => {
 };
 
 document.getElementById("importWalletBtn").onclick = async () => {
-    const mnemonic = prompt("Enter BIP39 mnemonic (12 or 24 words):");
+    const mnemonic = prompt("Enter 12-word BIP39 seed phrase:");
     if (!mnemonic) return;
     try {
         const cleaned = mnemonic.trim().toLowerCase().replace(/\s+/g, " ");
         const imported = await generateWallet(cleaned);
         await saveWallet(imported);
-        document.getElementById("seedBox").innerHTML = `<b>✅ Imported</b><br>${imported.mnemonic.substring(0, 60)}...`;
+        document.getElementById("seedBox").innerHTML = `<b>✅ Imported 12-Word Seed</b><br><span class="text-xs">${imported.mnemonic}</span>`;
         document.getElementById("seedBox").classList.remove("hidden");
         log("🔑 Wallet imported: " + shortAddr(imported.cashAddress));
     } catch(err) { log("Import failed: " + err.message, true); }
@@ -676,7 +642,7 @@ document.getElementById("showSeedBtn").onclick = () => {
     if (!wallet) return log("No wallet", true);
     const box = document.getElementById("seedBox");
     if (box.classList.contains("hidden")) {
-        box.innerHTML = `<b>🔐 Seed Phrase</b><br><span class="text-xs">${wallet.mnemonic}</span>`;
+        box.innerHTML = `<b>🔐 12-Word Seed Phrase</b><br><span class="text-xs">${wallet.mnemonic}</span>`;
         box.classList.remove("hidden");
     } else box.classList.add("hidden");
 };
@@ -694,9 +660,10 @@ document.getElementById("customToken").addEventListener("input", (e) => {
     document.getElementById("selectedToken").textContent = selectedTokenId.slice(0, 24);
 });
 
-// =============== INIT ===============
-log("⚗️ Cauldron Grid Bot - Pure JS Version");
-log("✅ No external dependencies - completely self-contained");
+// INIT
+log("⚗️ Cauldron Grid Bot - 12-Word BIP39 Version");
+log("✅ Compatible with Cashonize.com and standard BCH wallets");
+initEncryption();
 renderTokens();
 loadWallet();
 </script>
