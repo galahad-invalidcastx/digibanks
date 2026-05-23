@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@mem-cash/validation": "^0.0.4"
+  }
+}
