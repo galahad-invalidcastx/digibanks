@@ -4,8 +4,10 @@
 
 body {
   background: #0b0e13;
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
   color: #e5e7eb;
+  margin: 0;
+  padding: 0;
 }
 
 .glass {
@@ -15,7 +17,8 @@ body {
 }
 
 .btn {
-  transition: 0.15s;
+  transition: all 0.15s ease;
+  cursor: pointer;
 }
 
 .btn:hover {
@@ -68,11 +71,16 @@ body {
   border-radius: 999px;
   padding: 5px 12px;
   cursor: pointer;
-  transition: 0.15s;
+  transition: all 0.15s ease;
 }
 
 .token-pill:hover {
   background: #223127;
+}
+
+.token-pill-active {
+  background: #2ecc71;
+  color: #000;
 }
 
 .status-dot {
@@ -103,7 +111,15 @@ body {
   width: 6px;
 }
 
+::-webkit-scrollbar-track {
+  background: #1a1c22;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #29523b;
   border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2ecc71;
 }

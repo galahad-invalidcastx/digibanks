@@ -13,6 +13,7 @@ function App() {
   const addLog = (msg, isError = false) => {
     const timestamp = new Date().toLocaleTimeString()
     setLogs(prev => [...prev, { timestamp, msg, isError }])
+    console.log(msg)
   }
 
   useEffect(() => {
@@ -22,7 +23,7 @@ function App() {
   }, [])
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-4 md:p-6 min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-wrap justify-between items-center border-b border-green-900/30 pb-4 mb-6">

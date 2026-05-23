@@ -79,7 +79,7 @@ export default function WalletPanel({ wallet, setWallet, addLog }) {
       <div className="mt-4 space-y-3">
         <div>
           <span className="text-gray-400 text-sm">Status:</span>
-          <span className={`text-sm ${wallet ? 'text-green-300' : 'text-yellow-300'}`}>
+          <span className={`text-sm ml-2 ${wallet ? 'text-green-300' : 'text-yellow-300'}`}>
             {wallet ? "✅ BCH Mainnet (12-Word BIP39)" : "No wallet"}
           </span>
         </div>
@@ -105,7 +105,7 @@ export default function WalletPanel({ wallet, setWallet, addLog }) {
         </div>
         
         {wallet && (
-          <div className="flex justify-center">
+          <div className="flex justify-center mt-2">
             <QRCode value={wallet.cashAddress} size={130} bgColor="#111827" fgColor="#2ecc71" />
           </div>
         )}

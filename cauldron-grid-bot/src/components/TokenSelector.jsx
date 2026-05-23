@@ -21,7 +21,6 @@ export default function TokenSelector({ selectedToken, setSelectedToken, addLog 
         ))}
       </div>
       <input
-        id="customToken"
         className="w-full bg-black/50 border border-gray-700 rounded-lg p-2 text-sm font-mono"
         placeholder="Token symbol"
         value={selectedToken}

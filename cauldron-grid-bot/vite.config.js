@@ -12,4 +12,16 @@ export default defineConfig({
       stream: 'stream-browserify',
     },
   },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+  },
+  server: {
+    port: 3000,
+    host: true,
+  },
+  preview: {
+    port: 3000,
+    host: true,
+  },
 })

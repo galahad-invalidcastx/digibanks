@@ -11,7 +11,7 @@ export function calculateGridLevels(currentPrice, levels, rangePct) {
   for (let i = 0; i < levels; i++) {
     const price = lower + i * step
     buyPrices.push(price)
-    sellPrices.push(price * 1.002) // Small spread for sell orders
+    sellPrices.push(price * 1.002)
   }
   
   return { buyPrices, sellPrices, lower, upper }

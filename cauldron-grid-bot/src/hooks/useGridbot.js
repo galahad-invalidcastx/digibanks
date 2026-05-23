@@ -198,7 +198,6 @@ export function useGridBot(wallet, addLog) {
   }, [])
 
   return {
-    // State
     budgetBCH,
     tokenPriceBCH,
     currentTokenQty,
@@ -206,16 +205,12 @@ export function useGridBot(wallet, addLog) {
     botActive,
     botPaused,
     pnl,
-    
-    // Refs for settings
     gridLevelsRef,
     rangePctRef,
     stopLossRef,
     takeProfitRef,
     budgetUsdRef,
     bchUsdRef,
-    
-    // Methods
     precheck,
     startBot,
     stopBot,
