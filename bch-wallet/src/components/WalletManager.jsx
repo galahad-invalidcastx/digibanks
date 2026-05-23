@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Wallet, ElectrumNetworkProvider } from 'mainnet-js'
 import * as bip39 from 'bip39'
 
-const provider = new ElectrumNetworkProvider()
+// Initialize the provider with the Bitcoin Cash mainnet
+const provider = new ElectrumNetworkProvider('mainnet')
 
 const WalletManager = ({ onWalletLoaded, onTokensLoaded }) => {
   const [seed, setSeed] = useState('')
@@ -19,22 +20,22 @@ const WalletManager = ({ onWalletLoaded, onTokensLoaded }) => {
       // Generate random 12-word mnemonic
       const mnemonic = bip39.generateMnemonic(128)
       setSeed(mnemonic)
-      
+
       // Create wallet from seed
       const wallet = await Wallet.fromSeed(mnemonic, provider)
       const address = await wallet.getDepositAddress()
       const balances = await wallet.getBalances()
-      
+
       const walletData = {
         wallet,
         address,
         balance: balances.bch / 1e8, // convert satoshis to BCH
         seed: mnemonic
       }
-      
+
       setWalletInfo(walletData)
       onWalletLoaded(wallet)
-      
+
       // Fetch token assets
       await fetchTokens(wallet)
     } catch (err) {
@@ -50,7 +51,7 @@ const WalletManager = ({ onWalletLoaded, onTokensLoaded }) => {
       setError('Please enter a 12-word seed phrase')
       return
     }
-    
+
     setLoading(true)
     setError('')
     try {
@@ -58,21 +59,22 @@ const WalletManager = ({ onWalletLoaded, onTokensLoaded }) => {
       if (!bip39.validateMnemonic(importSeed)) {
         throw new Error('Invalid seed phrase')
       }
-      
+
       const wallet = await Wallet.fromSeed(importSeed, provider)
       const address = await wallet.getDepositAddress()
       const balances = await wallet.getBalances()
-      
+
       const walletData = {
         wallet,
         address,
         balance: balances.bch / 1e8,
         seed: importSeed
       }
-      
+
       setWalletInfo(walletData)
       setSeed(importSeed)
       onWalletLoaded(wallet)
+
       await fetchTokens(wallet)
     } catch (err) {
       setError('Failed to import wallet: ' + err.message)
@@ -85,16 +87,15 @@ const WalletManager = ({ onWalletLoaded, onTokensLoaded }) => {
   const fetchTokens = async (wallet) => {
     try {
       const address = await wallet.getDepositAddress()
-      
       // Get all UTXOs
       const utxos = await provider.getUtxos(address)
-      
+
       // Filter token UTXOs and fetch token info
       const tokenPromises = utxos
         .filter(utxo => utxo.token && utxo.token !== '0x')
         .map(async (utxo) => {
           let tokenInfo = { tokenId: utxo.token, amount: utxo.tokenAmount / 1e8 }
-          
+
           // Try to get token details if available
           try {
             const info = await provider.getTokenInfo(utxo.token)
@@ -109,12 +110,12 @@ const WalletManager = ({ onWalletLoaded, onTokensLoaded }) => {
             tokenInfo.symbol = 'Token'
             tokenInfo.decimals = 8
           }
-          
+
           return tokenInfo
         })
-      
+
       const tokens = await Promise.all(tokenPromises)
-      
+
       // Aggregate token amounts
       const tokenMap = new Map()
       tokens.forEach(token => {
@@ -124,7 +125,7 @@ const WalletManager = ({ onWalletLoaded, onTokensLoaded }) => {
           tokenMap.set(token.tokenId, token)
         }
       })
-      
+
       const aggregatedTokens = Array.from(tokenMap.values())
       onTokensLoaded(aggregatedTokens)
     } catch (err) {
