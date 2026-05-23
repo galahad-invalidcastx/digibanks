@@ -10,8 +10,10 @@
     "start": "vite preview"
   },
   "dependencies": {
-    "@bitauth/libauth": "^2.0.0",
+    "bchaddrjs": "^0.4.9",
+    "bip32": "^4.0.0",
     "bip39": "^3.1.0",
+    "bitcoinjs-lib": "^6.1.5",
     "qrcode.react": "^3.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

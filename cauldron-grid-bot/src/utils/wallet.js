@@ -1,70 +1,42 @@
-// src/utils/wallet.js
 import * as bip39 from 'bip39'
-
-// Libauth is loaded globally from CDN (see index.html)
-let libauth = null
-
-function getLibauth() {
-  if (libauth) return libauth
-  if (window.libauth || window.Libauth) {
-    libauth = window.libauth || window.Libauth
-    return libauth
-  }
-  throw new Error('Libauth not loaded yet. Please refresh the page.')
-}
+import * as bip32 from 'bip32'
+import * as bitcoin from 'bitcoinjs-lib'
+import bchaddr from 'bchaddrjs'
 
 const STORAGE_KEY = "cauldron_wallet_12word"
 const BCH_DERIVATION_PATH = "m/44'/145'/0'/0/0"
 
-// ---------- Wallet Generation ----------
+// ---------- Wallet Generation (works like Cashonize) ----------
 export async function generateWallet(existingMnemonic = null) {
-  const Libauth = getLibauth()
-  const {
-    mnemonicToSeed,
-    deriveHdPrivateKey,
-    deriveHdPath,
-    derivePublicKeyFromPrivateKey,
-    secp256k1,
-    cashAddressToLockingBytecode,
-    lockingBytecodeToCashAddress
-  } = Libauth
-
   try {
     const mnemonic = existingMnemonic || bip39.generateMnemonic(128) // 12 words
     if (!bip39.validateMnemonic(mnemonic)) {
       throw new Error("Invalid BIP39 mnemonic")
     }
 
-    const seed = await mnemonicToSeed(mnemonic, "")
-    const masterNode = await deriveHdPrivateKey({ seed })
-    const hdPathResult = await deriveHdPath(masterNode, BCH_DERIVATION_PATH)
+    const seed = await bip39.mnemonicToSeed(mnemonic)
+    const root = bip32.fromSeed(seed, bitcoin.networks.bitcoin)
+    const child = root.derivePath(BCH_DERIVATION_PATH)
+    const { address: legacyAddress } = bitcoin.payments.p2pkh({
+      pubkey: child.publicKey,
+      network: bitcoin.networks.bitcoin,
+    })
 
-    if (typeof hdPathResult === 'string') {
-      throw new Error(`Derivation error: ${hdPathResult}`)
+    // Convert legacy address to CashAddress format
+    let cashAddress = legacyAddress
+    if (bchaddr && bchaddr.toCashAddress) {
+      cashAddress = bchaddr.toCashAddress(legacyAddress)
     }
 
-    const publicKey = derivePublicKeyFromPrivateKey(secp256k1, hdPathResult.privateKey)
-
-    const lockingBytecode = cashAddressToLockingBytecode({
-      type: 'p2pkh',
-      payload: publicKey
-    })
-    const cashAddress = lockingBytecodeToCashAddress({
-      lockingBytecode: lockingBytecode.bytecode,
-      prefix: 'bitcoincash'
-    })
-
-    const fingerprint = Array.from(publicKey)
-      .slice(0, 4)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
+    const fingerprint = child.fingerprint?.toString('hex') || '00000000'
 
     return {
       mnemonic,
       cashAddress,
+      legacyAddress,
       fingerprint,
       path: BCH_DERIVATION_PATH,
-      created: Date.now()
+      created: Date.now(),
     }
   } catch (error) {
     console.error("Wallet generation error:", error)
@@ -72,7 +44,7 @@ export async function generateWallet(existingMnemonic = null) {
   }
 }
 
-// ---------- Encryption (AES-GCM) ----------
+// ---------- Encryption (unchanged) ----------
 let encryptionKey = null
 
 async function initEncryption() {
@@ -125,13 +97,13 @@ export async function saveWallet(walletData, setWallet, addLog) {
     const encrypted = await encryptData({
       mnemonic: walletData.mnemonic,
       fingerprint: walletData.fingerprint,
-      cashAddress: walletData.cashAddress
+      cashAddress: walletData.cashAddress,
     })
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       encryptedData: encrypted,
       cashAddress: walletData.cashAddress,
       fingerprint: walletData.fingerprint,
-      created: walletData.created
+      created: walletData.created,
     }))
     setWallet(walletData)
     addLog(`✅ Wallet saved | ${shortAddr(walletData.cashAddress)}`)
