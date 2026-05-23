@@ -1,48 +1,34 @@
 // src/utils/wallet.js
 import * as bip39 from 'bip39'
 
-// src/utils/wallet.js
-import * as bip39 from 'bip39'
-
-async function waitForLibauth() {
-  if (window.libauth || window.Libauth) return window.libauth || window.Libauth
-  return new Promise((resolve) => {
-    const check = setInterval(() => {
-      if (window.libauth || window.Libauth) {
-        clearInterval(check)
-        resolve(window.libauth || window.Libauth)
-      }
-    }, 50)
-  })
-}
-
-const libauth = await waitForLibauth()
-// ... rest of the code
-
-
 // Libauth is loaded globally from CDN (see index.html)
-/*
-const libauth = window.libauth || window.Libauth
-if (!libauth) {
-  throw new Error('Libauth not loaded. Please refresh the page.')
-}
-*/
+let libauth = null
 
-const {
-  mnemonicToSeed,
-  deriveHdPrivateKey,
-  deriveHdPath,
-  derivePublicKeyFromPrivateKey,
-  secp256k1,
-  cashAddressToLockingBytecode,
-  lockingBytecodeToCashAddress
-} = libauth
+function getLibauth() {
+  if (libauth) return libauth
+  if (window.libauth || window.Libauth) {
+    libauth = window.libauth || window.Libauth
+    return libauth
+  }
+  throw new Error('Libauth not loaded yet. Please refresh the page.')
+}
 
 const STORAGE_KEY = "cauldron_wallet_12word"
 const BCH_DERIVATION_PATH = "m/44'/145'/0'/0/0"
 
 // ---------- Wallet Generation ----------
 export async function generateWallet(existingMnemonic = null) {
+  const Libauth = getLibauth()
+  const {
+    mnemonicToSeed,
+    deriveHdPrivateKey,
+    deriveHdPath,
+    derivePublicKeyFromPrivateKey,
+    secp256k1,
+    cashAddressToLockingBytecode,
+    lockingBytecodeToCashAddress
+  } = Libauth
+
   try {
     const mnemonic = existingMnemonic || bip39.generateMnemonic(128) // 12 words
     if (!bip39.validateMnemonic(mnemonic)) {
