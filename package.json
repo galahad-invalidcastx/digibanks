@@ -1,5 +1,10 @@
 {
   "dependencies": {
     "@mem-cash/validation": "^0.0.4"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.17"
   }
 }
